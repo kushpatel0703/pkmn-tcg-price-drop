@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pokemon TCG Price Drops</title>
+<style>
+  :root {
+    --bg: #f6f5f1; --card: #ffffff; --ink: #1c1f24; --muted: #667080; --line: #e3e1da;
+    --accent: #1f6f4a; --accent-soft: #e2f1e8; --chip: #eeece5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #14171b; --card: #1d2127; --ink: #eceef1; --muted: #98a2b0; --line: #2c323a;
+            --accent: #5fd39a; --accent-soft: #1d3a2c; --chip: #272c33; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 18px 14px 60px; }
+  h1 { font-size: 21px; margin: 0 0 2px; letter-spacing: -0.01em; }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 14px; }
+  .tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px; }
+  .tab { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px 4px;
+         text-align: center; cursor: pointer; color: var(--ink); font: inherit; }
+  .tab b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; }
+  .tab span { font-size: 11.5px; color: var(--muted); }
+  .tab[aria-selected="true"] { border-color: var(--accent); background: var(--accent-soft); }
+  .tab[aria-selected="true"] span { color: var(--ink); }
+  .filters { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
+  .filters input, .filters select { width: 100%; padding: 9px 10px; border-radius: 9px; border: 1px solid var(--line);
+         background: var(--card); color: var(--ink); font: inherit; font-size: 14px; min-width: 0; }
+  .filters input { grid-column: 1 / -1; }
+  .note { color: var(--muted); font-size: 12.5px; margin: 6px 2px 10px; }
+  .row { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; background: var(--card);
+         border: 1px solid var(--line); border-radius: 12px; padding: 11px 13px; margin-bottom: 7px;
+         text-decoration: none; color: inherit; }
+  .name { font-weight: 600; overflow-wrap: anywhere; }
+  .meta { color: var(--muted); font-size: 12.5px; grid-column: 1; }
+  .chip { display: inline-block; background: var(--chip); border-radius: 6px; padding: 0 6px; font-size: 11.5px;
+          margin-right: 4px; color: var(--ink); }
+  .price { text-align: right; grid-row: 1 / span 2; grid-column: 2; align-self: center; white-space: nowrap; }
+  .now { font-size: 17px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .was { color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  .pct { color: var(--accent); font-weight: 650; font-size: 13px; font-variant-numeric: tabular-nums; }
+  .empty { text-align: center; color: var(--muted); padding: 34px 10px; }
+  button.more { width: 100%; padding: 11px; border-radius: 10px; border: 1px solid var(--line);
+                background: var(--card); color: var(--ink); font: inherit; cursor: pointer; }
+  footer { color: var(--muted); font-size: 12px; margin-top: 22px; }
+  footer a { color: inherit; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Pokemon TCG price drops</h1>
+  <div class="sub" id="sub"></div>
+  <div class="tabs" id="tabs" role="tablist"></div>
+  <div class="filters">
+    <input id="q" type="search" placeholder="Search card name or number" autocomplete="off">
+    <select id="set" aria-label="Set"></select>
+    <select id="sort" aria-label="Sort">
+      <option value="pct">Biggest % drop</option>
+      <option value="drop">Biggest $ drop</option>
+      <option value="cheap">Cheapest now</option>
+      <option value="dear">Most expensive now</option>
+    </select>
+  </div>
+  <div class="note" id="note"></div>
+  <div id="list"></div>
+  <footer id="foot"></footer>
+</div>
+<script>
+const R = /*__REPORT__*/null;
+const SECTIONS = [
+  { key: "day",    label: "24 hours",   was: "yesterday" },
+  { key: "week",   label: "7 days",     was: "a week ago" },
+  { key: "avg30",  label: "vs 30-day avg", was: "30-day avg" },
+  { key: "record", label: "New lows",   was: "previous low" },
+];
+const $ = (id) => document.getElementById(id);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls;
+  if (text != null) e.textContent = text; return e; };
+const money = (n) => "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const niceDate = (s) => s ? new Date(s + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
+let active = "day", shown = 60;
+
+function init() {
+  if (!R) { $("list").appendChild(el("div", "empty", "No report yet. The first daily run has not finished.")); return; }
+  $("sub").textContent = "Prices for " + niceDate(R.date) + " · " + R.cards_priced.toLocaleString() +
+    " card printings across " + R.sets_tracked + " sets";
+  const first = SECTIONS.find((s) => R.sections[s.key].length);
+  if (first) active = first.key;
+  const sets = new Set();
+  SECTIONS.forEach((s) => R.sections[s.key].forEach((r) => sets.add(r.set)));
+  const sel = $("set");
+  sel.appendChild(new Option("All sets", ""));
+  [...sets].sort().forEach((s) => sel.appendChild(new Option(s, s)));
+  ["q", "set", "sort"].forEach((id) => $(id).addEventListener("input", () => { shown = 60; draw(); }));
+  $("foot").textContent = "Market prices from TCGplayer via tcgcsv.com, updated once a day. Tracking since " +
+    niceDate(R.tracking_since) + ". Cards under " + money(R.min_price) + " are left out.";
+  draw();
+}
+
+function rowsFor(key) {
+  const q = $("q").value.trim().toLowerCase(), set = $("set").value, sort = $("sort").value;
+  let rows = R.sections[key].filter((r) => (!set || r.set === set) &&
+    (!q || (r.name + " " + r.num).toLowerCase().includes(q)));
+  const by = { pct: (a, b) => b.pct - a.pct, drop: (a, b) => b.drop - a.drop,
+               cheap: (a, b) => a.price - b.price, dear: (a, b) => b.price - a.price }[sort];
+  return rows.slice().sort(by);
+}
+
+function draw() {
+  const tabs = $("tabs"); tabs.textContent = "";
+  SECTIONS.forEach((s) => {
+    const b = el("button", "tab"); b.type = "button"; b.setAttribute("role", "tab");
+    b.setAttribute("aria-selected", String(s.key === active));
+    b.appendChild(el("b", null, rowsFor(s.key).length)); b.appendChild(el("span", null, s.label));
+    b.addEventListener("click", () => { active = s.key; shown = 60; draw(); });
+    tabs.appendChild(b);
+  });
+  const sec = SECTIONS.find((s) => s.key === active), rows = rowsFor(active), th = R.thresholds[active];
+  let note = "Down at least " + money(th.min_drop_usd) + " and " + th.min_drop_pct + "% ";
+  if (active === "day") note += R.compared.day ? "since " + niceDate(R.compared.day) + "." : "since the previous day (no earlier day on file yet).";
+  if (active === "week") note += R.compared.week ? "since " + niceDate(R.compared.week) + "." : "over a week (needs a week of history).";
+  if (active === "avg30") note += "below the card's average over the last 30 days.";
+  if (active === "record") note += "below its lowest price since tracking began (" + niceDate(R.tracking_since) + ").";
+  $("note").textContent = note;
+  const list = $("list"); list.textContent = "";
+  if (!rows.length) { list.appendChild(el("div", "empty", "Nothing here today with these filters.")); return; }
+  rows.slice(0, shown).forEach((r) => {
+    const a = el("a", "row"); a.href = "https://www.tcgplayer.com/product/" + encodeURIComponent(r.id);
+    a.target = "_blank"; a.rel = "noopener";
+    a.appendChild(el("div", "name", r.name));
+    const p = el("div", "price");
+    p.appendChild(el("div", "now", money(r.price)));
+    p.appendChild(el("div", "pct", "↓ " + r.pct + "% (" + money(r.drop) + ")"));
+    p.appendChild(el("div", "was", sec.was + " " + money(r.was)));
+    a.appendChild(p);
+    const m = el("div", "meta");
+    m.appendChild(el("span", "chip", r.printing));
+    m.appendChild(document.createTextNode([r.set, r.num ? "#" + r.num : "", r.rarity].filter(Boolean).join(" · ")));
+    a.appendChild(m);
+    list.appendChild(a);
+  });
+  if (rows.length > shown) {
+    const more = el("button", "more", "Show more (" + (rows.length - shown) + " left)"); more.type = "button";
+    more.addEventListener("click", () => { shown += 60; draw(); });
+    list.appendChild(more);
+  }
+}
+init();
+</script>
+</body>
+</html>

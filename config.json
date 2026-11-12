@@ -1,0 +1,15 @@
+{
+  "category_id": 3,
+  "sets_published_on_or_after": "2020-02-01",
+  "exclude_set_names_containing": [],
+  "only_set_names_containing": [],
+  "backfill_days": 90,
+  "min_price": 1.0,
+  "thresholds": {
+    "day":    {"min_drop_usd": 1.0, "min_drop_pct": 10},
+    "week":   {"min_drop_usd": 1.0, "min_drop_pct": 15},
+    "avg30":  {"min_drop_usd": 1.0, "min_drop_pct": 15, "min_days_of_history": 10},
+    "record": {"min_drop_usd": 0.25, "min_drop_pct": 2, "min_days_of_history": 30}
+  },
+  "max_rows_per_section": 200
+}

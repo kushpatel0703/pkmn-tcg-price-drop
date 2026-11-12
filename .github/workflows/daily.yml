@@ -1,0 +1,39 @@
+name: Daily price drops
+
+on:
+  schedule:
+    - cron: "40 21 * * *"   # 21:40 UTC, after tcgcsv's daily refresh (~20:00 UTC)
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["tracker/**", "config.json", ".github/workflows/daily.yml"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-price-drops
+  cancel-in-progress: false
+
+jobs:
+  track:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Make sure 7z is available (history backfill)
+        run: which 7z || (sudo apt-get update && sudo apt-get install -y p7zip-full)
+      - name: Fetch prices and build report
+        run: python tracker/track.py
+      - name: Save results
+        run: |
+          git config user.name "price-drop-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data report dashboard
+          git diff --cached --quiet && echo "nothing new" && exit 0
+          git commit -m "Prices for $(date -u +%F)"
+          git pull --rebase --autostash
+          git push
