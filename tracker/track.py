@@ -24,6 +24,9 @@ import time
 import urllib.request
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from score import score_card  # noqa: E402
+
 ROOT = Path(__file__).resolve().parent.parent
 BASE = os.environ.get("TCGCSV_BASE", "https://tcgcsv.com").rstrip("/")
 SNAP_DIR = ROOT / "data" / "snapshots"
@@ -287,13 +290,16 @@ def analyse(cfg, cards, set_of, days, groups):
             break
     week = read_snapshot(SNAP_DIR / f"{week_day}.csv.gz") if week_day else {}
 
-    sums, counts, lows, low_day = {}, {}, {}, {}
+    sums, counts, lows, low_day, series = {}, {}, {}, {}, {}
     for d in days[:-1]:
         snap = read_snapshot(SNAP_DIR / f"{d}.csv.gz")
-        in30 = (t - dt.date.fromisoformat(d)).days <= 30
+        age = (t - dt.date.fromisoformat(d)).days
+        in30 = age <= 30
         for k, (m, _) in snap.items():
             if k not in cur:
                 continue
+            if age <= 93:
+                series.setdefault(k, []).append((age, m))
             if in30:
                 sums[k] = sums.get(k, 0.0) + m
                 counts[k] = counts.get(k, 0) + 1
@@ -302,7 +308,22 @@ def analyse(cfg, cards, set_of, days, groups):
 
     th = cfg["thresholds"]
     history_days = len(days) - 1
-    sections = {"day": [], "week": [], "avg30": [], "record": []}
+    sections = {"buy": [], "day": [], "week": [], "avg30": [], "record": []}
+
+    # buy-now score for every card with enough history
+    group_of = {g["name"]: g for g in groups}
+    undated_ids = set(cfg.get("undated_set_ids", []))
+    scores = {}
+    for k, (m, low) in cur.items():
+        pid = str(k[0])
+        if pid not in cards or m < cfg["min_price"]:
+            continue
+        g = group_of.get(set_of[pid])
+        months = (t - dt.date.fromisoformat(g["published"])).days / 30.44 if g else None
+        sc = score_card(m, low, series.get(k, []), months, bool(g and g["id"] in undated_ids),
+                        cfg.get("buyable_within_pct", 3))
+        if sc:
+            scores[k] = sc
 
     def row(k, ref, extra=None):
         pid, sub = k
@@ -314,6 +335,13 @@ def analyse(cfg, cards, set_of, days, groups):
              "pct": round((ref - m) / ref * 100, 1),
              # a copy is listed at (or within a few % of) the market price right now
              "buyable": low is not None and float(low) <= m * (1 + cfg.get("buyable_within_pct", 3) / 100)}
+        sc = scores.get(k)
+        if sc:
+            r.update({"score": sc["score"], "label": sc["label"], "why": sc["why"]})
+        else:  # not enough history to score; say so when the set has only just come out
+            g = group_of.get(r["set"])
+            if g and g["id"] not in undated_ids and (t - dt.date.fromisoformat(g["published"])).days < 61:
+                r.update({"label": "Wait, too new", "why": ["set released in the last 2 months; prices are usually still settling"]})
         if extra:
             r.update(extra)
         return r
@@ -335,8 +363,17 @@ def analyse(cfg, cards, set_of, days, groups):
         if history_days >= th["record"]["min_days_of_history"] and k in lows and passes(m, lows[k], th["record"]):
             sections["record"].append(row(k, lows[k], {"was_on": low_day[k]}))
 
-    for rows in sections.values():
-        rows.sort(key=lambda r: (-r["pct"], -r["drop"]))
+    labels = {}
+    for k, sc in scores.items():
+        labels[sc["label"]] = labels.get(sc["label"], 0) + 1
+        if sc["label"] == "Buy now":
+            sections["buy"].append(row(k, sc["avg90"]))
+
+    for key, rows in sections.items():
+        if key == "buy":
+            rows.sort(key=lambda r: (-r["score"], -r["pct"]))
+        else:
+            rows.sort(key=lambda r: (-r["pct"], -r["drop"]))
         del rows[cfg["max_rows_per_section"]:]
 
     return {
@@ -350,6 +387,8 @@ def analyse(cfg, cards, set_of, days, groups):
                  for g in groups if g["name"] in set(set_of.values())],
         "thresholds": th,
         "min_price": cfg["min_price"],
+        "scored": len(scores),
+        "labels": labels,
         "sections": sections,
     }
 
