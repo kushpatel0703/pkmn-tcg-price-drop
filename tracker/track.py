@@ -152,21 +152,27 @@ def source_date():
         return dt.datetime.now(dt.timezone.utc).date()
 
 
-def backfill(cfg, groups, today, days):
-    """One-time history load from tcgcsv's daily price archives."""
+def backfill(cfg, groups, today, days, limit=25):
+    """Fill missing days from tcgcsv's daily price archives, newest first.
+    At most `limit` archives per run, and it stops as soon as tcgcsv says
+    "too many requests"; the next daily run carries on from there."""
     have = set(snapshot_days())
     ids = {g["id"] for g in groups}
+    done_file = ROOT / "data" / "backfill_unavailable.json"
+    unavailable = set(json.loads(done_file.read_text())) if done_file.exists() else set()
+    missing = [d for d in ((today - dt.timedelta(days=b)).isoformat() for b in range(1, days + 1))
+               if d not in have and d not in unavailable]
+    if not missing:
+        return
     if not shutil.which("7z"):
         print("7z not installed: skipping history backfill")
         return
-    for back in range(days, 0, -1):
-        day = (today - dt.timedelta(days=back)).isoformat()
-        if day in have:
-            continue
+    print(f"history: {len(missing)} days missing, loading up to {limit}")
+    for day in missing[:limit]:
         tmp = Path(tempfile.mkdtemp())
         try:
             arc = tmp / "a.7z"
-            arc.write_bytes(fetch_bytes(f"archive/tcgplayer/prices-{day}.ppmd.7z", retries=2))
+            arc.write_bytes(fetch_bytes(f"archive/tcgplayer/prices-{day}.ppmd.7z", retries=1))
             subprocess.run(["7z", "x", str(arc), f"-o{tmp}", "-y"], check=True,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             cat = tmp / day / str(cfg["category_id"])
@@ -178,11 +184,19 @@ def backfill(cfg, groups, today, days):
             if rows:
                 write_snapshot(day, rows)
                 print(f"backfilled {day}: {len(rows)} prices")
-            time.sleep(1)  # be polite to tcgcsv
+            else:
+                unavailable.add(day)
+            time.sleep(3)  # be polite to tcgcsv
         except Exception as e:
-            print(f"backfill {day} skipped: {e}")
+            if "429" in str(e):
+                print(f"tcgcsv asked us to slow down at {day}; will continue on the next run")
+                break
+            print(f"backfill {day} unavailable: {e}")
+            unavailable.add(day)
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
+    if unavailable:
+        done_file.write_text(json.dumps(sorted(unavailable)))
 
 
 # ---------------------------------------------------------------- analysis
@@ -192,7 +206,10 @@ def analyse(cfg, cards, set_of, days):
     today = days[-1]
     t = dt.date.fromisoformat(today)
     cur = read_snapshot(SNAP_DIR / f"{today}.csv.gz")
+    # "24 hours" compares with the previous day on file, if it is recent (<= 3 days old)
     prev_day = days[-2] if len(days) > 1 else None
+    if prev_day and (t - dt.date.fromisoformat(prev_day)).days > 3:
+        prev_day = None
     prev = read_snapshot(SNAP_DIR / f"{prev_day}.csv.gz") if prev_day else {}
 
     # snapshot closest to 7 days back (accept 7-10 days old)
@@ -287,7 +304,7 @@ def main():
         sys.exit("no sets matched config.json")
     print(f"{len(groups)} sets tracked; prices dated {today}")
 
-    if len(snapshot_days()) < 2 and cfg.get("backfill_days", 0) > 0:
+    if cfg.get("backfill_days", 0) > 0:
         backfill(cfg, groups, today, cfg["backfill_days"])
 
     cards, set_of, rows, failed = {}, {}, [], 0
