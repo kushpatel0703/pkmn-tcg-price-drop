@@ -79,7 +79,9 @@ def supply_signal(items):
         return None
     m30 = median(c30)
     mlong = median(clong) if clong else None
-    if m30 >= 0.06 or (mlong is not None and mlong >= 0.15 and m30 >= 0.02):
+    if len(c30) < 2:                     # one product is too thin to call a trend
+        state = "steady"
+    elif m30 >= 0.06 or (mlong is not None and mlong >= 0.15 and m30 >= 0.02):
         state = "tightening"
     elif m30 <= -0.05 or (mlong is not None and mlong <= -0.12 and m30 <= -0.01):
         state = "plentiful"
