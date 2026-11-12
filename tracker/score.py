@@ -1,19 +1,24 @@
-"""Buy-now score: is this a good moment for a collector to buy this card?
+"""Buy-now score: is waiting likely to get a collector a better price?
 
-0-100, built from four parts you can read off the card's own numbers:
+0-100. A high score means the price looks settled, so waiting is unlikely to
+save money. Built from three parts read off the card's own numbers:
 
-  position  (35)  how cheap it is against its own last 90 days
-  trend     (30)  has the price settled, or is it still falling / spiking
-  stage     (20)  how far the set is into its print run: release date, plus
+  settled   (55)  has the price been flat for the last 30 days (not falling,
+                  not spiking)
+  stage     (30)  how far the set is into its print run: release date, plus
                   whether its sealed product is getting dearer (leaving print)
                   or cheaper (still plentiful)
-  listing   (15)  is a copy actually listed at the market price
+  listing   (15)  is a copy listed close to the market price
 
-It describes where the price sits in its recent history. It does not predict
-that a card cannot go lower.
+A discount against the 90-day average earns no points. In the first backtest
+(Sep-Nov 2026, a falling market) cards that were cheap against their average
+kept falling; a 30-day flat price was the best sign that waiting would not
+help. The discount is still reported so you can see it. See tracker/backtest.py.
+
+It describes the price history. It does not predict that a card cannot go lower.
 """
 
-WEIGHTS = {"position": 35, "trend": 30, "stage": 20, "listing": 15}
+WEIGHTS = {"settled": 55, "stage": 30, "listing": 15}
 MIN_POINTS = 21          # days of price history needed before scoring
 
 
@@ -31,21 +36,19 @@ def price_near(series, age, slack=3):
 
 
 def stage_score(months, undated):
-    """Singles usually fall for the first months after release, sit near a
-    floor while the set is in print, then climb after it leaves print."""
+    """Singles fall hardest in the first months after release and, in the
+    history tested so far, kept drifting down until the set was a few years old."""
     if undated or months is None:
         return 0.6
-    if months < 1:
+    if months < 2:
         return 0.0
-    if months < 3:
-        return 0.1 + 0.5 * (months - 1) / 2      # 0.1 -> 0.6
     if months < 6:
-        return 0.6 + 0.4 * (months - 3) / 3      # 0.6 -> 1.0
-    if months < 18:
-        return 1.0
+        return 0.2
+    if months < 12:
+        return 0.4
     if months < 30:
-        return 0.8
-    return 0.65
+        return 0.6
+    return 1.0
 
 
 SEALED_KEEP = ("booster box", "elite trainer box", "booster bundle", "booster pack")
@@ -102,43 +105,49 @@ def score_card(price, listing, series, months, undated, buyable_within_pct=3, su
     avg90 = sum(prices) / len(prices)
     lo, hi = min(prices + [price]), max(prices + [price])
     below = (avg90 - price) / avg90 if avg90 else 0.0
-    range_pos = 0.5 if hi - lo < 0.01 or (hi - lo) / hi < 0.03 else 1 - (price - lo) / (hi - lo)
-    position = 0.6 * clamp(below / 0.30) + 0.4 * range_pos
 
     p7 = price_near(hist, 7)
+    p30 = price_near(hist, 28, slack=7)
     chg7 = (price - p7) / p7 if p7 else 0.0
-    if chg7 < 0:      # still falling: waiting is cheaper
-        trend = 1 - clamp((-chg7 - 0.02) / 0.10)
-    else:             # spiking: likely hype, wait for it to cool
-        trend = 1 - clamp((chg7 - 0.05) / 0.20)
+    chg30 = (price - p30) / p30 if p30 else chg7
+    last30 = [m for a, m in hist if a <= 30] + [price]
+    rng30 = (max(last30) - min(last30)) / max(last30)
+    # flat over 30 days, no drift over the month, quiet this week
+    settled = (0.5 * (1 - clamp((rng30 - 0.03) / 0.17))
+               + 0.3 * (1 - clamp((abs(chg30) - 0.03) / 0.12))
+               + 0.2 * (1 - clamp((abs(chg7) - 0.02) / 0.08)))
 
     stage = stage_score(months, undated)
     tightening = bool(supply and supply["state"] == "tightening" and (months is None or months >= 4))
     if tightening:                       # set looks like it is leaving print: do not wait
         stage = 1.0
     elif supply and supply["state"] == "plentiful":
-        stage *= 0.85                    # sealed still getting cheaper: singles can drift too
+        stage *= 0.7                     # sealed still getting cheaper: singles can drift too
 
     if listing is None:
         avail = 0.3
     else:
-        avail = 1 - clamp((listing / price - (1 + buyable_within_pct / 100)) / 0.20)
+        gap = listing / price - 1
+        if gap > buyable_within_pct / 100:     # nothing listed at market: harder to buy at this price
+            avail = 1 - clamp((gap - buyable_within_pct / 100) / 0.15)
+        else:                                  # listings far under market usually pull the market price down
+            avail = 1 - 0.7 * clamp((-gap - 0.10) / 0.30)
 
-    parts = {"position": position, "trend": trend, "stage": stage, "listing": avail}
+    parts = {"settled": settled, "stage": stage, "listing": avail}
     total = round(sum(WEIGHTS[k] * v for k, v in parts.items()))
 
     # label: name the main blocker first, otherwise grade by score
-    if not undated and months is not None and months < 2:
+    if not undated and months is not None and months < 3:
         label = "Wait, too new"
-    elif chg7 <= -0.08:
+    elif chg7 <= -0.08 or chg30 <= -0.10:
         label = "Wait, still falling"
-    elif chg7 >= 0.15:
+    elif chg7 >= 0.08 or chg30 >= 0.20:
         label = "Wait, price spiking"
-    elif total >= 85 and below >= 0.10:   # cheap against its own history, settled, and available
+    elif total >= 85:
         label = "Buy now"
-    elif tightening and total >= 70 and below >= -0.05:
+    elif tightening and total >= 65:
         label = "Buy soon, supply tightening"
-    elif total >= 70:
+    elif total >= 65:
         label = "Good price"
     else:
         label = "No rush"
@@ -152,12 +161,16 @@ def score_card(price, listing, series, months, undated, buyable_within_pct=3, su
         why.append("at its 90-day average")
     if price <= lo * 1.02 and hi - lo >= 0.01 and (hi - lo) / hi >= 0.03:
         why.append("at its 90-day low")
+    if chg30 <= -0.03:
+        why.append(f"down {round(-chg30 * 100)}% in 30 days")
+    elif chg30 >= 0.03:
+        why.append(f"up {round(chg30 * 100)}% in 30 days")
+    else:
+        why.append("flat for 30 days" if rng30 <= 0.06 else "about level over 30 days")
     if chg7 <= -0.02:
         why.append(f"down {round(-chg7 * 100)}% this week")
-    elif chg7 >= 0.05:
+    elif chg7 >= 0.02:
         why.append(f"up {round(chg7 * 100)}% this week")
-    else:
-        why.append("steady this week")
     if not undated and months is not None:
         why.append("set released this month" if months < 1 else f"set is {round(months)} months old")
     if supply and supply["state"] != "steady" and not (supply["state"] == "tightening" and not tightening):
@@ -172,5 +185,5 @@ def score_card(price, listing, series, months, undated, buyable_within_pct=3, su
                    else f"cheapest listing is {round(gap * 100)}% above market")
 
     return {"score": total, "label": label, "why": why,
-            "avg90": round(avg90, 2), "chg7": round(chg7 * 100, 1),
+            "avg90": round(avg90, 2), "chg7": round(chg7 * 100, 1), "chg30": round(chg30 * 100, 1),
             "parts": {k: round(WEIGHTS[k] * v) for k, v in parts.items()}}

@@ -382,10 +382,10 @@ def analyse(cfg, cards, set_of, days, groups, sealed_by_set=None):
 
     for key, rows in sections.items():
         if key == "buy":   # keep the best of each verdict so neither crowds the other out
-            rows.sort(key=lambda r: (-r["score"], -r["pct"]))
+            rows.sort(key=lambda r: (-r["score"], -r["price"]))   # ties: bigger-ticket cards first
             now = [r for r in rows if r["label"] == "Buy now"][:cfg["max_rows_per_section"]]
             soon = [r for r in rows if r["label"] != "Buy now"][:cfg["max_rows_per_section"] // 2]
-            rows[:] = sorted(now + soon, key=lambda r: (-r["score"], -r["pct"]))
+            rows[:] = sorted(now + soon, key=lambda r: (-r["score"], -r["price"]))
             continue
         rows.sort(key=lambda r: (-r["pct"], -r["drop"]))
         del rows[cfg["max_rows_per_section"]:]

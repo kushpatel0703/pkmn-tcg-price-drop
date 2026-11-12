@@ -3,7 +3,7 @@
   "sets_published_on_or_after": "2020-02-01",
   "exclude_set_names_containing": [],
   "only_set_names_containing": [],
-  "backfill_days": 90,
+  "backfill_days": 365,
   "min_price": 1.0,
   "thresholds": {
     "day": {
@@ -40,7 +40,7 @@
   "late_added_set_ids": [
     2545
   ],
-  "_notes": "min_set_id drops old sets the source lists without a real release date (POP Series, Nintendo Promos, EX Trainer Kits...). include_set_ids: 2545 = SWSH Sword & Shield Promo Cards (dated Nov 2019). exclude_set_ids: 2374 = Miscellaneous Cards & Products. set_dates fixes release dates the source lacks (2776 = First Partner Pack). late_added_set_ids get their history loaded after the fact. undated_set_ids are promo groups that span years (SWSH/SV/ME promos, Prize Pack Series, Southeast Asia Exclusives), so set age is ignored in their buy score.",
+  "_notes": "min_set_id drops old sets the source lists without a real release date (POP Series, Nintendo Promos, EX Trainer Kits...). include_set_ids: 2545 = SWSH Sword & Shield Promo Cards (dated Nov 2019). exclude_set_ids: 2374 = Miscellaneous Cards & Products. set_dates fixes release dates the source lacks (2776 = First Partner Pack). late_added_set_ids get their history loaded after the fact. undated_set_ids are promo groups that span years (SWSH/SV/ME promos, Prize Pack Series, Southeast Asia Exclusives), so set age is ignored in their buy score. backfill_days 365: older history loads about 25 days per daily run, so the buy score can be backtested across more than one market phase.",
   "undated_set_ids": [
     2545,
     22872,

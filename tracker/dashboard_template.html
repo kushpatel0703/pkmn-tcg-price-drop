@@ -136,7 +136,7 @@ function init() {
   buildSets();
   ["q", "sort", "buy", "verdict"].forEach((id) => $(id).addEventListener("input", () => { shown = 60; draw(); }));
   $("foot").textContent = "Market prices from TCGplayer via tcgcsv.com, updated once a day. Tracking since " +
-    niceDate(R.tracking_since) + ". Cards under " + money(R.min_price) + " are left out. All cards are raw (ungraded). The buy score (0\u2013100) weighs how cheap a card is against its last 90 days, whether the price has settled, how old the set is and whether its sealed product is getting dearer or cheaper, and whether a copy is listed at market; it describes the price history and is not a prediction. The cheapest listing is for any condition and excludes shipping, so check the copy is Near Mint before buying.";
+    niceDate(R.tracking_since) + ". Cards under " + money(R.min_price) + " are left out. All cards are raw (ungraded). The buy score (0\u2013100) weighs whether the price has been flat for 30 days, how old the set is and whether its sealed product is getting dearer or cheaper, and whether a copy is listed at market; it describes the price history and is not a prediction. The cheapest listing is for any condition and excludes shipping, so check the copy is Near Mint before buying.";
   draw();
 }
 
@@ -198,7 +198,7 @@ function rowsFor(key) {
     (!v || (r.label || "").indexOf(v) === 0) &&
     (!q || (r.name + " " + r.num).toLowerCase().includes(q)));
   const sc = (r) => r.score == null ? -1 : r.score;
-  const by = { auto: key === "buy" ? (a, b) => sc(b) - sc(a) || b.pct - a.pct : (a, b) => b.pct - a.pct,
+  const by = { auto: key === "buy" ? (a, b) => sc(b) - sc(a) || b.price - a.price : (a, b) => b.pct - a.pct,
                score: (a, b) => sc(b) - sc(a) || b.pct - a.pct, pct: (a, b) => b.pct - a.pct, drop: (a, b) => b.drop - a.drop,
                cheap: (a, b) => a.price - b.price, dear: (a, b) => b.price - a.price }[sort];
   return rows.slice().sort(by);
@@ -215,7 +215,7 @@ function draw() {
   });
   const sec = SECTIONS.find((s) => s.key === active), rows = rowsFor(active), th = R.thresholds[active] || {};
   let note = active === "buy"
-    ? "Buy now: score of 85+ and at least 10% under the 90-day average. Buy soon: a fair price in a set whose sealed product is getting dearer, a sign it is leaving print. Top cards of each are shown."
+    ? "Buy now: score of 85+, meaning the price has been flat for a month in a set past its launch slide, so waiting is unlikely to save money. Buy soon: a settled price in a set whose sealed product is getting dearer. Top cards of each are shown; ties put pricier cards first."
     : "Down at least " + money(th.min_drop_usd) + " and " + th.min_drop_pct + "% ";
   if (active === "day") note += R.compared.day ? "since " + niceDate(R.compared.day) + "." : "since the previous day (no earlier day on file yet).";
   if (active === "week") note += R.compared.week ? "since " + niceDate(R.compared.week) + "." : "over a week (needs a week of history).";
@@ -231,7 +231,8 @@ function draw() {
     a.appendChild(el("div", "name", r.name));
     const p = el("div", "price");
     p.appendChild(el("div", "now", money(r.price)));
-    p.appendChild(el("div", "pct", "↓ " + r.pct + "% (" + money(r.drop) + ")"));
+    p.appendChild(el("div", "pct", r.drop > 0 ? "↓ " + r.pct + "% (" + money(r.drop) + ")"
+      : r.drop < 0 ? "↑ " + Math.abs(r.pct) + "% vs avg" : "at its average"));
     p.appendChild(el("div", "was", sec.was + " " + money(r.was)));
     a.appendChild(p);
     const m = el("div", "meta");
