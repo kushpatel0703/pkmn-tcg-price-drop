@@ -199,6 +199,7 @@ def backfill(cfg, groups, today, days, limit=25):
         print("7z not installed: skipping history backfill")
         return
     print(f"history: {len(missing)} days missing, loading up to {limit}")
+    written = []
     for day in missing[:limit]:
         tmp = Path(tempfile.mkdtemp())
         try:
@@ -214,6 +215,7 @@ def backfill(cfg, groups, today, days, limit=25):
                     rows += price_rows(json.loads(f.read_text()).get("results", []))
             if rows:
                 write_snapshot(day, rows)
+                written.append(day)
                 print(f"backfilled {day}: {len(rows)} prices")
             else:
                 unavailable.add(day)
@@ -228,6 +230,10 @@ def backfill(cfg, groups, today, days, limit=25):
             shutil.rmtree(tmp, ignore_errors=True)
     if unavailable:
         done_file.write_text(json.dumps(sorted(unavailable)))
+    # days loaded here already hold every tracked set, so the late-set pass can skip them
+    late_file = ROOT / "data" / "late_sets_done.json"
+    late_done = set(json.loads(late_file.read_text())) if late_file.exists() else set()
+    late_file.write_text(json.dumps(sorted(late_done | set(written))))
 
 
 def backfill_late_sets(cfg, today, limit=20):
