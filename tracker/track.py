@@ -25,7 +25,7 @@ import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from score import score_card  # noqa: E402
+from score import score_card, supply_signal  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 BASE = os.environ.get("TCGCSV_BASE", "https://tcgcsv.com").rstrip("/")
@@ -117,12 +117,13 @@ def load_products(cfg, group, today):
         cached = json.loads(f.read_text())
         age = (today - dt.date.fromisoformat(cached["fetched"])).days
         recent = (today - dt.date.fromisoformat(group["published"])).days < 60
-        if age < (1 if recent else 7):
-            return cached["cards"]
-    cards = {}
+        if "sealed" in cached and age < (1 if recent else 7):
+            return cached["cards"], cached["sealed"]
+    cards, sealed = {}, {}
     for p in fetch_json(f"tcgplayer/{cfg['category_id']}/{group['id']}/products"):
         ext = {e.get("name"): e.get("value") for e in (p.get("extendedData") or [])}
         if "Number" not in ext:  # sealed product, not a single card
+            sealed[str(p["productId"])] = p.get("name") or ""
             continue
         cards[str(p["productId"])] = {
             "name": p.get("name") or "",
@@ -130,9 +131,9 @@ def load_products(cfg, group, today):
             "rarity": ext.get("Rarity") or "",
         }
     PROD_DIR.mkdir(parents=True, exist_ok=True)
-    f.write_text(json.dumps({"fetched": today.isoformat(), "set": group["name"], "cards": cards},
+    f.write_text(json.dumps({"fetched": today.isoformat(), "set": group["name"], "cards": cards, "sealed": sealed},
                             ensure_ascii=False, separators=(",", ":")))
-    return cards
+    return cards, sealed
 
 
 # ---------------------------------------------------------------- snapshots
@@ -270,7 +271,7 @@ def backfill_late_sets(cfg, today, limit=20):
 
 # ---------------------------------------------------------------- analysis
 
-def analyse(cfg, cards, set_of, days, groups):
+def analyse(cfg, cards, set_of, days, groups, sealed_by_set=None):
     """days: sorted list of snapshot dates, last one is 'today'."""
     today = days[-1]
     t = dt.date.fromisoformat(today)
@@ -313,6 +314,16 @@ def analyse(cfg, cards, set_of, days, groups):
     # buy-now score for every card with enough history
     group_of = {g["name"]: g for g in groups}
     undated_ids = set(cfg.get("undated_set_ids", []))
+    # sealed-product supply signal per set (booster boxes, ETBs, bundles, packs)
+    supply = {}
+    for name, sealed in (sealed_by_set or {}).items():
+        items = []
+        for k, (m, _) in cur.items():
+            if str(k[0]) in sealed:
+                items.append((sealed[str(k[0])], m, series.get(k, [])))
+        sig = supply_signal(items)
+        if sig:
+            supply[name] = sig
     scores = {}
     for k, (m, low) in cur.items():
         pid = str(k[0])
@@ -321,7 +332,7 @@ def analyse(cfg, cards, set_of, days, groups):
         g = group_of.get(set_of[pid])
         months = (t - dt.date.fromisoformat(g["published"])).days / 30.44 if g else None
         sc = score_card(m, low, series.get(k, []), months, bool(g and g["id"] in undated_ids),
-                        cfg.get("buyable_within_pct", 3))
+                        cfg.get("buyable_within_pct", 3), supply.get(set_of[pid]))
         if sc:
             scores[k] = sc
 
@@ -366,14 +377,17 @@ def analyse(cfg, cards, set_of, days, groups):
     labels = {}
     for k, sc in scores.items():
         labels[sc["label"]] = labels.get(sc["label"], 0) + 1
-        if sc["label"] == "Buy now":
+        if sc["label"] in ("Buy now", "Buy soon, supply tightening"):
             sections["buy"].append(row(k, sc["avg90"]))
 
     for key, rows in sections.items():
-        if key == "buy":
+        if key == "buy":   # keep the best of each verdict so neither crowds the other out
             rows.sort(key=lambda r: (-r["score"], -r["pct"]))
-        else:
-            rows.sort(key=lambda r: (-r["pct"], -r["drop"]))
+            now = [r for r in rows if r["label"] == "Buy now"][:cfg["max_rows_per_section"]]
+            soon = [r for r in rows if r["label"] != "Buy now"][:cfg["max_rows_per_section"] // 2]
+            rows[:] = sorted(now + soon, key=lambda r: (-r["score"], -r["pct"]))
+            continue
+        rows.sort(key=lambda r: (-r["pct"], -r["drop"]))
         del rows[cfg["max_rows_per_section"]:]
 
     return {
@@ -383,7 +397,8 @@ def analyse(cfg, cards, set_of, days, groups):
         "days_of_history": len(days),
         "cards_priced": sum(1 for k in cur if str(k[0]) in cards),
         "sets_tracked": len(set(set_of.values())),
-        "sets": [{"name": g["name"], "published": g["published"], "era": g["era"]}
+        "sets": [{"name": g["name"], "published": g["published"], "era": g["era"],
+                  **({"supply": supply[g["name"]]} if g["name"] in supply else {})}
                  for g in groups if g["name"] in set(set_of.values())],
         "thresholds": th,
         "min_price": cfg["min_price"],
@@ -417,10 +432,10 @@ def main():
         backfill(cfg, groups, today, cfg["backfill_days"])
         backfill_late_sets(cfg, today)
 
-    cards, set_of, rows, failed = {}, {}, [], 0
+    cards, set_of, rows, failed, sealed_by_set = {}, {}, [], 0, {}
     for g in groups:
         try:
-            gc = load_products(cfg, g, today)
+            gc, gs = load_products(cfg, g, today)
             raw = fetch_json(f"tcgplayer/{cfg['category_id']}/{g['id']}/prices")
         except Exception as e:
             failed += 1
@@ -429,7 +444,8 @@ def main():
         cards.update(gc)
         for pid in gc:
             set_of[pid] = g["name"]
-        rows += [r for r in price_rows(raw) if str(r[0]) in gc]
+        sealed_by_set[g["name"]] = gs
+        rows += [r for r in price_rows(raw) if str(r[0]) in gc or str(r[0]) in gs]
     if failed > len(groups) / 2 or not rows:
         sys.exit("too many sets failed to load; not writing a report today")
 
@@ -439,7 +455,7 @@ def main():
     for f in PROD_DIR.glob("*.json"):
         if f.stem not in keep:
             f.unlink()
-    report = analyse(cfg, cards, set_of, snapshot_days(), groups)
+    report = analyse(cfg, cards, set_of, snapshot_days(), groups, sealed_by_set)
     write_outputs(report)
     s = report["sections"]
     print(f"{report['cards_priced']} prices | 24h {len(s['day'])} | 7d {len(s['week'])} | "

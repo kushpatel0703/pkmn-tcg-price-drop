@@ -63,6 +63,7 @@
   .verdict { display: inline-block; border-radius: 6px; padding: 0 7px; font-size: 11.5px; font-weight: 650; margin-right: 6px;
              background: var(--chip); color: var(--ink); }
   .verdict.buy { background: var(--accent); color: var(--card); }
+  .verdict.soon { background: var(--warn); color: var(--card); }
   .verdict.good { background: var(--accent-soft); color: var(--accent); }
   .verdict.wait { background: var(--warn-soft); color: var(--warn); }
   .why { color: var(--muted); font-size: 12.5px; grid-column: 1 / -1; }
@@ -92,6 +93,14 @@
       <option value="drop">Biggest $ drop</option>
       <option value="cheap">Cheapest now</option>
       <option value="dear">Most expensive now</option>
+    </select>
+    <select id="verdict" aria-label="Verdict">
+      <option value="">All verdicts</option>
+      <option>Buy now</option>
+      <option>Buy soon, supply tightening</option>
+      <option>Good price</option>
+      <option>No rush</option>
+      <option value="Wait">Wait (any reason)</option>
     </select>
     <label class="toggle"><input id="buy" type="checkbox"> Only cards listed at or under market price</label>
   </div>
@@ -125,9 +134,9 @@ function init() {
   const first = SECTIONS.find((s) => R.sections[s.key].length);
   if (first) active = first.key;
   buildSets();
-  ["q", "sort", "buy"].forEach((id) => $(id).addEventListener("input", () => { shown = 60; draw(); }));
+  ["q", "sort", "buy", "verdict"].forEach((id) => $(id).addEventListener("input", () => { shown = 60; draw(); }));
   $("foot").textContent = "Market prices from TCGplayer via tcgcsv.com, updated once a day. Tracking since " +
-    niceDate(R.tracking_since) + ". Cards under " + money(R.min_price) + " are left out. All cards are raw (ungraded). The buy score (0\u2013100) weighs how cheap a card is against its last 90 days, whether the price has settled, how old the set is, and whether a copy is listed at market; it describes the price history and is not a prediction. The cheapest listing is for any condition and excludes shipping, so check the copy is Near Mint before buying.";
+    niceDate(R.tracking_since) + ". Cards under " + money(R.min_price) + " are left out. All cards are raw (ungraded). The buy score (0\u2013100) weighs how cheap a card is against its last 90 days, whether the price has settled, how old the set is and whether its sealed product is getting dearer or cheaper, and whether a copy is listed at market; it describes the price history and is not a prediction. The cheapest listing is for any condition and excludes shipping, so check the copy is Near Mint before buying.";
   draw();
 }
 
@@ -168,7 +177,8 @@ function buildSets() {
       cb.dataset.set = s.name; cb.addEventListener("change", () => setPicked([s.name], cb.checked));
       row.appendChild(cb); row.appendChild(el("span", null, s.name));
       const n = drops[s.name] ? drops[s.name].size : 0;
-      row.appendChild(el("small", null, (s.published ? s.published.slice(0, 4) + " \u00b7 " : "") + n + (n === 1 ? " drop" : " drops")));
+      const sup = s.supply && s.supply.state !== "steady" ? " \u00b7 " + (s.supply.state === "tightening" ? "supply tightening" : "plentiful") : "";
+      row.appendChild(el("small", null, (s.published ? s.published.slice(0, 4) + " \u00b7 " : "") + n + (n === 1 ? " card" : " cards") + sup));
       list.appendChild(row);
     });
   });
@@ -183,8 +193,9 @@ function syncSets() {
 
 function rowsFor(key) {
   const q = $("q").value.trim().toLowerCase(), sort = $("sort").value;
-  const only = $("buy").checked;
+  const only = $("buy").checked, v = $("verdict").value;
   let rows = R.sections[key].filter((r) => isPicked(r.set) && (!only || buyable(r)) &&
+    (!v || (r.label || "").indexOf(v) === 0) &&
     (!q || (r.name + " " + r.num).toLowerCase().includes(q)));
   const sc = (r) => r.score == null ? -1 : r.score;
   const by = { auto: key === "buy" ? (a, b) => sc(b) - sc(a) || b.pct - a.pct : (a, b) => b.pct - a.pct,
@@ -204,8 +215,7 @@ function draw() {
   });
   const sec = SECTIONS.find((s) => s.key === active), rows = rowsFor(active), th = R.thresholds[active] || {};
   let note = active === "buy"
-    ? "Score of 85+ and at least 10% under the 90-day average: cheap for the card, no longer falling, and past the set's launch slide." +
-      (R.labels && R.labels["Buy now"] > R.sections.buy.length ? " Showing the top " + R.sections.buy.length + " of " + R.labels["Buy now"] + "." : "")
+    ? "Buy now: score of 85+ and at least 10% under the 90-day average. Buy soon: a fair price in a set whose sealed product is getting dearer, a sign it is leaving print. Top cards of each are shown."
     : "Down at least " + money(th.min_drop_usd) + " and " + th.min_drop_pct + "% ";
   if (active === "day") note += R.compared.day ? "since " + niceDate(R.compared.day) + "." : "since the previous day (no earlier day on file yet).";
   if (active === "week") note += R.compared.week ? "since " + niceDate(R.compared.week) + "." : "over a week (needs a week of history).";
@@ -237,7 +247,7 @@ function draw() {
     }
     if (r.label) {
       const w = el("div", "why");
-      const cls = r.label === "Buy now" ? "buy" : r.label === "Good price" ? "good" : r.label.indexOf("Wait") === 0 ? "wait" : "";
+      const cls = r.label === "Buy now" ? "buy" : r.label.indexOf("Buy soon") === 0 ? "soon" : r.label === "Good price" ? "good" : r.label.indexOf("Wait") === 0 ? "wait" : "";
       w.appendChild(el("span", "verdict " + cls, r.label + (r.score != null ? " \u00b7 " + r.score : "")));
       w.appendChild(document.createTextNode((r.why || []).join(" \u00b7 ")));
       a.appendChild(w);

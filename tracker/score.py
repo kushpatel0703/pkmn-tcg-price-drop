@@ -4,7 +4,9 @@
 
   position  (35)  how cheap it is against its own last 90 days
   trend     (30)  has the price settled, or is it still falling / spiking
-  stage     (20)  how far the set is into its print run (by release date)
+  stage     (20)  how far the set is into its print run: release date, plus
+                  whether its sealed product is getting dearer (leaving print)
+                  or cheaper (still plentiful)
   listing   (15)  is a copy actually listed at the market price
 
 It describes where the price sits in its recent history. It does not predict
@@ -46,7 +48,49 @@ def stage_score(months, undated):
     return 0.65
 
 
-def score_card(price, listing, series, months, undated, buyable_within_pct=3):
+SEALED_KEEP = ("booster box", "elite trainer box", "booster bundle", "booster pack")
+SEALED_SKIP = ("case", "display", "pokemon center", "code card", "lot of", "half booster box")
+
+
+def median(xs):
+    xs = sorted(xs)
+    n = len(xs)
+    return xs[n // 2] if n % 2 else (xs[n // 2 - 1] + xs[n // 2]) / 2
+
+
+def supply_signal(items):
+    """items: [(name, price_today, series)] for one set's sealed products.
+    Rising sealed prices are the best free hint that a set is leaving print;
+    falling ones mean product is still plentiful (or being reprinted)."""
+    c30, clong, used = [], [], []
+    for name, price, series in items:
+        low = name.lower()
+        if price < 3 or not any(w in low for w in SEALED_KEEP) or any(w in low for w in SEALED_SKIP):
+            continue
+        p30 = price_near(series, 28, slack=7)
+        if not p30:
+            continue
+        c30.append(price / p30 - 1)
+        old = [m for a, m in series if 75 <= a <= 93]
+        if old:
+            clong.append(price / (sum(old) / len(old)) - 1)
+        used.append({"name": name, "price": round(price, 2), "chg30": round((price / p30 - 1) * 100, 1)})
+    if not c30:
+        return None
+    m30 = median(c30)
+    mlong = median(clong) if clong else None
+    if m30 >= 0.06 or (mlong is not None and mlong >= 0.15 and m30 >= 0.02):
+        state = "tightening"
+    elif m30 <= -0.05 or (mlong is not None and mlong <= -0.12 and m30 <= -0.01):
+        state = "plentiful"
+    else:
+        state = "steady"
+    return {"state": state, "chg30": round(m30 * 100, 1),
+            "chg90": None if mlong is None else round(mlong * 100, 1),
+            "products": len(used), "items": sorted(used, key=lambda u: -u["price"])[:6]}
+
+
+def score_card(price, listing, series, months, undated, buyable_within_pct=3, supply=None):
     """series: [(age_in_days, market_price)] for earlier days, any order.
     Returns None when there is not enough history."""
     hist = [(a, m) for a, m in series if 1 <= a <= 90]
@@ -67,6 +111,11 @@ def score_card(price, listing, series, months, undated, buyable_within_pct=3):
         trend = 1 - clamp((chg7 - 0.05) / 0.20)
 
     stage = stage_score(months, undated)
+    tightening = bool(supply and supply["state"] == "tightening" and (months is None or months >= 4))
+    if tightening:                       # set looks like it is leaving print: do not wait
+        stage = 1.0
+    elif supply and supply["state"] == "plentiful":
+        stage *= 0.85                    # sealed still getting cheaper: singles can drift too
 
     if listing is None:
         avail = 0.3
@@ -85,6 +134,8 @@ def score_card(price, listing, series, months, undated, buyable_within_pct=3):
         label = "Wait, price spiking"
     elif total >= 85 and below >= 0.10:   # cheap against its own history, settled, and available
         label = "Buy now"
+    elif tightening and total >= 70 and below >= -0.05:
+        label = "Buy soon, supply tightening"
     elif total >= 70:
         label = "Good price"
     else:
@@ -107,6 +158,9 @@ def score_card(price, listing, series, months, undated, buyable_within_pct=3):
         why.append("steady this week")
     if not undated and months is not None:
         why.append("set released this month" if months < 1 else f"set is {round(months)} months old")
+    if supply and supply["state"] != "steady" and not (supply["state"] == "tightening" and not tightening):
+        why.append(f"sealed product up {abs(round(supply['chg30']))}% in 30 days, supply tightening" if tightening
+                   else f"sealed product down {abs(round(supply['chg30']))}% in 30 days, still plentiful")
     if listing is not None:
         gap = listing / price - 1
         why.append("a copy is listed at market" if gap <= buyable_within_pct / 100
