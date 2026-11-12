@@ -26,10 +26,22 @@
   .tab span { font-size: 11.5px; color: var(--muted); }
   .tab[aria-selected="true"] { border-color: var(--accent); background: var(--accent-soft); }
   .tab[aria-selected="true"] span { color: var(--ink); }
-  .filters { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
-  .filters input, .filters select { width: 100%; padding: 9px 10px; border-radius: 9px; border: 1px solid var(--line);
+  .filters { display: grid; grid-template-columns: 1fr; gap: 6px; margin-bottom: 8px; }
+  .filters input[type="search"], .filters select { width: 100%; padding: 9px 10px; border-radius: 9px; border: 1px solid var(--line);
          background: var(--card); color: var(--ink); font: inherit; font-size: 14px; min-width: 0; }
-  .filters input { grid-column: 1 / -1; }
+  .filters input[type="search"] { grid-column: 1 / -1; }
+  details#setbox { grid-column: 1 / -1; background: var(--card); border: 1px solid var(--line); border-radius: 9px; }
+  details#setbox summary { padding: 9px 10px; cursor: pointer; font-size: 14px; }
+  .setactions { display: flex; gap: 6px; padding: 0 10px 8px; }
+  .setactions button, .era button { border: 1px solid var(--line); background: var(--chip); color: var(--ink);
+       border-radius: 7px; padding: 5px 10px; font: inherit; font-size: 12.5px; cursor: pointer; }
+  #setlist { max-height: 46vh; overflow-y: auto; padding: 0 10px 8px; border-top: 1px solid var(--line); }
+  .era { display: flex; justify-content: space-between; align-items: center; font-weight: 650; font-size: 13px;
+         margin: 10px 0 4px; }
+  .setrow { display: flex; align-items: center; gap: 9px; padding: 6px 0; font-size: 14px; }
+  .setrow input { width: 18px; height: 18px; flex: none; accent-color: var(--accent); }
+  .setrow span { flex: 1; overflow-wrap: anywhere; }
+  .setrow small { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .note { color: var(--muted); font-size: 12.5px; margin: 6px 2px 10px; }
   .row { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; background: var(--card);
          border: 1px solid var(--line); border-radius: 12px; padding: 11px 13px; margin-bottom: 7px;
@@ -61,7 +73,11 @@
   <div class="tabs" id="tabs" role="tablist"></div>
   <div class="filters">
     <input id="q" type="search" placeholder="Search card name or number" autocomplete="off">
-    <select id="set" aria-label="Set"></select>
+    <details id="setbox">
+      <summary id="setsum">Sets: all</summary>
+      <div class="setactions"><button type="button" id="setall">Select all</button><button type="button" id="setnone">Clear all</button></div>
+      <div id="setlist"></div>
+    </details>
     <select id="sort" aria-label="Sort">
       <option value="pct">Biggest % drop</option>
       <option value="drop">Biggest $ drop</option>
@@ -97,21 +113,67 @@ function init() {
     " card printings across " + R.sets_tracked + " sets";
   const first = SECTIONS.find((s) => R.sections[s.key].length);
   if (first) active = first.key;
-  const sets = new Set();
-  SECTIONS.forEach((s) => R.sections[s.key].forEach((r) => sets.add(r.set)));
-  const sel = $("set");
-  sel.appendChild(new Option("All sets", ""));
-  [...sets].sort().forEach((s) => sel.appendChild(new Option(s, s)));
-  ["q", "set", "sort", "buy"].forEach((id) => $(id).addEventListener("input", () => { shown = 60; draw(); }));
+  buildSets();
+  ["q", "sort", "buy"].forEach((id) => $(id).addEventListener("input", () => { shown = 60; draw(); }));
   $("foot").textContent = "Market prices from TCGplayer via tcgcsv.com, updated once a day. Tracking since " +
     niceDate(R.tracking_since) + ". Cards under " + money(R.min_price) + " are left out. All cards are raw (ungraded). The cheapest listing is for any condition and excludes shipping, so check the copy is Near Mint before buying.";
   draw();
 }
 
+// ---- set checklist: tick the sets you are collecting; remembered on this device
+let ALL_SETS = [], picked = null;   // picked === null means every set
+function loadPicked() {
+  try { const v = JSON.parse(localStorage.getItem("pkmn-sets") || "null");
+        if (Array.isArray(v)) picked = new Set(v.filter((n) => ALL_SETS.some((s) => s.name === n))); } catch (e) {}
+}
+function savePicked() {
+  try { if (picked) localStorage.setItem("pkmn-sets", JSON.stringify([...picked])); else localStorage.removeItem("pkmn-sets"); } catch (e) {}
+}
+function isPicked(name) { return !picked || picked.has(name); }
+function setPicked(names, on) {
+  if (!picked) picked = new Set(ALL_SETS.map((s) => s.name));
+  names.forEach((n) => on ? picked.add(n) : picked.delete(n));
+  if (picked.size === ALL_SETS.length) picked = null;
+  savePicked(); shown = 60; syncSets(); draw();
+}
+function buildSets() {
+  ALL_SETS = (R.sets || []).slice();
+  if (!ALL_SETS.length) {  // older reports: fall back to sets seen in the rows
+    const seen = new Set(); SECTIONS.forEach((s) => R.sections[s.key].forEach((r) => seen.add(r.set)));
+    ALL_SETS = [...seen].sort().map((n) => ({ name: n, published: "", era: "Sets" }));
+  }
+  loadPicked();
+  const drops = {}; SECTIONS.forEach((s) => R.sections[s.key].forEach((r) => { (drops[r.set] = drops[r.set] || new Set()).add(r.id + r.printing); }));
+  const list = $("setlist"); list.textContent = "";
+  const eras = []; ALL_SETS.forEach((s) => { if (!eras.includes(s.era)) eras.push(s.era); });
+  eras.forEach((era) => {
+    const members = ALL_SETS.filter((s) => s.era === era);
+    const head = el("div", "era"); head.appendChild(el("span", null, era));
+    const b = el("button", null, "All / none"); b.type = "button";
+    b.addEventListener("click", () => setPicked(members.map((s) => s.name), !members.every((s) => isPicked(s.name))));
+    head.appendChild(b); list.appendChild(head);
+    members.forEach((s) => {
+      const row = el("label", "setrow"); const cb = document.createElement("input"); cb.type = "checkbox";
+      cb.dataset.set = s.name; cb.addEventListener("change", () => setPicked([s.name], cb.checked));
+      row.appendChild(cb); row.appendChild(el("span", null, s.name));
+      const n = drops[s.name] ? drops[s.name].size : 0;
+      row.appendChild(el("small", null, (s.published ? s.published.slice(0, 4) + " \u00b7 " : "") + n + (n === 1 ? " drop" : " drops")));
+      list.appendChild(row);
+    });
+  });
+  $("setall").addEventListener("click", () => { picked = null; savePicked(); shown = 60; syncSets(); draw(); });
+  $("setnone").addEventListener("click", () => { picked = new Set(); savePicked(); shown = 60; syncSets(); draw(); });
+  syncSets();
+}
+function syncSets() {
+  $("setlist").querySelectorAll("input").forEach((cb) => { cb.checked = isPicked(cb.dataset.set); });
+  $("setsum").textContent = "Sets: " + (!picked ? "all " + ALL_SETS.length : picked.size + " of " + ALL_SETS.length + " selected");
+}
+
 function rowsFor(key) {
-  const q = $("q").value.trim().toLowerCase(), set = $("set").value, sort = $("sort").value;
+  const q = $("q").value.trim().toLowerCase(), sort = $("sort").value;
   const only = $("buy").checked;
-  let rows = R.sections[key].filter((r) => (!set || r.set === set) && (!only || buyable(r)) &&
+  let rows = R.sections[key].filter((r) => isPicked(r.set) && (!only || buyable(r)) &&
     (!q || (r.name + " " + r.num).toLowerCase().includes(q)));
   const by = { pct: (a, b) => b.pct - a.pct, drop: (a, b) => b.drop - a.drop,
                cheap: (a, b) => a.price - b.price, dear: (a, b) => b.price - a.price }[sort];

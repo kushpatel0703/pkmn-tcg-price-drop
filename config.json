@@ -26,5 +26,19 @@
     }
   },
   "max_rows_per_section": 200,
-  "buyable_within_pct": 3
+  "buyable_within_pct": 3,
+  "min_set_id": 2585,
+  "include_set_ids": [
+    2545
+  ],
+  "exclude_set_ids": [
+    2374
+  ],
+  "set_dates": {
+    "2776": "2021-02-01"
+  },
+  "late_added_set_ids": [
+    2545
+  ],
+  "_notes": "min_set_id drops old sets the source lists without a real release date (POP Series, Nintendo Promos, EX Trainer Kits...). include_set_ids: 2545 = SWSH Sword & Shield Promo Cards (dated Nov 2019). exclude_set_ids: 2374 = Miscellaneous Cards & Products. set_dates fixes release dates the source lacks (2776 = First Partner Pack). late_added_set_ids get their history loaded after the fact."
 }

@@ -59,6 +59,20 @@ def fetch_json(path):
 
 # ---------------------------------------------------------------- sets & cards
 
+def era_of(name, published):
+    if name.startswith("SWSH"):
+        return "Sword & Shield"
+    if name.startswith("SV"):
+        return "Scarlet & Violet"
+    if name.startswith("ME"):
+        return "Mega Evolution"
+    if published < "2023-03-31":
+        return "Sword & Shield"
+    if published < "2025-09-26":
+        return "Scarlet & Violet"
+    return "Mega Evolution"
+
+
 def tracked_groups(cfg):
     cutoff = cfg["sets_published_on_or_after"]
     excl = [s.lower() for s in cfg.get("exclude_set_names_containing", [])]
@@ -71,17 +85,23 @@ def tracked_groups(cfg):
         [{"id": int(g["groupId"]), "name": g.get("name"), "abbr": g.get("abbreviation"),
           "published": (g.get("publishedOn") or "")[:10]} for g in all_groups],
         key=lambda g: (g["published"], g["id"])), ensure_ascii=False, indent=0))
+    include = set(cfg.get("include_set_ids", []))
+    exclude = set(cfg.get("exclude_set_ids", []))
+    fixed_dates = cfg.get("set_dates", {})
     for g in all_groups:
         name = g.get("name") or ""
-        published = (g.get("publishedOn") or "")[:10]
-        if not published or published < cutoff:
+        gid = int(g["groupId"])
+        published = fixed_dates.get(str(gid)) or (g.get("publishedOn") or "")[:10]
+        if gid in exclude:
+            continue
+        if gid not in include and (not published or published < cutoff or gid < cfg.get("min_set_id", 0)):
             continue
         low = name.lower()
         if any(s in low for s in excl):
             continue
         if only and not any(s in low for s in only):
             continue
-        out.append({"id": int(g["groupId"]), "name": name, "published": published})
+        out.append({"id": gid, "name": name, "published": published, "era": era_of(name, published)})
     out.sort(key=lambda g: g["published"])
     return out
 
@@ -206,9 +226,48 @@ def backfill(cfg, groups, today, days, limit=25):
         done_file.write_text(json.dumps(sorted(unavailable)))
 
 
+def backfill_late_sets(cfg, today, limit=20):
+    """Sets added to tracking later have no rows in older snapshots. Load them
+    from the archives, a few days per run, newest first."""
+    late = [int(i) for i in cfg.get("late_added_set_ids", [])]
+    if not late or not shutil.which("7z"):
+        return
+    state_file = ROOT / "data" / "late_sets_done.json"
+    done = set(json.loads(state_file.read_text())) if state_file.exists() else set()
+    todo = [d for d in reversed(snapshot_days()) if d != today.isoformat() and d not in done]
+    if not todo:
+        return
+    print(f"late-added sets: {len(todo)} days of history to load, doing up to {limit}")
+    for day in todo[:limit]:
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            arc = tmp / "a.7z"
+            arc.write_bytes(fetch_bytes(f"archive/tcgplayer/prices-{day}.ppmd.7z", retries=1))
+            subprocess.run(["7z", "x", str(arc), f"-o{tmp}", "-y"], check=True,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            snap = read_snapshot(SNAP_DIR / f"{day}.csv.gz")
+            for gid in late:
+                f = tmp / day / str(cfg["category_id"]) / str(gid) / "prices"
+                if f.exists():
+                    for pid, sub, m, low in price_rows(json.loads(f.read_text()).get("results", [])):
+                        snap.setdefault((pid, sub), (m, low))
+            write_snapshot(day, [(k[0], k[1], v[0], v[1]) for k, v in snap.items()])
+            done.add(day)
+            time.sleep(3)
+        except Exception as e:
+            if "429" in str(e):
+                print(f"tcgcsv asked us to slow down at {day}; will continue on the next run")
+                break
+            print(f"late-set history {day} unavailable: {e}")
+            done.add(day)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+    state_file.write_text(json.dumps(sorted(done)))
+
+
 # ---------------------------------------------------------------- analysis
 
-def analyse(cfg, cards, set_of, days):
+def analyse(cfg, cards, set_of, days, groups):
     """days: sorted list of snapshot dates, last one is 'today'."""
     today = days[-1]
     t = dt.date.fromisoformat(today)
@@ -287,6 +346,8 @@ def analyse(cfg, cards, set_of, days):
         "days_of_history": len(days),
         "cards_priced": sum(1 for k in cur if str(k[0]) in cards),
         "sets_tracked": len(set(set_of.values())),
+        "sets": [{"name": g["name"], "published": g["published"], "era": g["era"]}
+                 for g in groups if g["name"] in set(set_of.values())],
         "thresholds": th,
         "min_price": cfg["min_price"],
         "sections": sections,
@@ -315,6 +376,7 @@ def main():
 
     if cfg.get("backfill_days", 0) > 0:
         backfill(cfg, groups, today, cfg["backfill_days"])
+        backfill_late_sets(cfg, today)
 
     cards, set_of, rows, failed = {}, {}, [], 0
     for g in groups:
@@ -333,7 +395,12 @@ def main():
         sys.exit("too many sets failed to load; not writing a report today")
 
     write_snapshot(today.isoformat(), rows)
-    report = analyse(cfg, cards, set_of, snapshot_days())
+    # drop cached card lists for sets no longer tracked
+    keep = {str(g["id"]) for g in groups}
+    for f in PROD_DIR.glob("*.json"):
+        if f.stem not in keep:
+            f.unlink()
+    report = analyse(cfg, cards, set_of, snapshot_days(), groups)
     write_outputs(report)
     s = report["sections"]
     print(f"{report['cards_priced']} prices | 24h {len(s['day'])} | 7d {len(s['week'])} | "
