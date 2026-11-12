@@ -245,7 +245,9 @@ def analyse(cfg, cards, set_of, days):
         r = {"id": pid, "name": c["name"], "num": c["num"], "rarity": c["rarity"],
              "set": set_of[str(pid)], "printing": sub, "price": round(m, 2),
              "listing": low, "was": round(ref, 2), "drop": round(ref - m, 2),
-             "pct": round((ref - m) / ref * 100, 1)}
+             "pct": round((ref - m) / ref * 100, 1),
+             # a copy is listed at (or within a few % of) the market price right now
+             "buyable": low is not None and float(low) <= m * (1 + cfg.get("buyable_within_pct", 3) / 100)}
         if extra:
             r.update(extra)
         return r

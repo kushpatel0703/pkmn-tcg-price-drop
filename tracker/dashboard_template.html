@@ -42,6 +42,11 @@
   .now { font-size: 17px; font-weight: 650; font-variant-numeric: tabular-nums; }
   .was { color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
   .pct { color: var(--accent); font-weight: 650; font-size: 13px; font-variant-numeric: tabular-nums; }
+  .row.buy { border-color: var(--accent); box-shadow: inset 4px 0 0 var(--accent); }
+  .badge { display: inline-block; background: var(--accent-soft); color: var(--accent); border-radius: 6px;
+           padding: 0 6px; font-size: 11.5px; font-weight: 650; margin-right: 6px; }
+  .toggle { display: flex; align-items: center; gap: 8px; grid-column: 1 / -1; font-size: 14px; padding: 4px 2px; }
+  .toggle input { width: 18px; height: 18px; accent-color: var(--accent); }
   .empty { text-align: center; color: var(--muted); padding: 34px 10px; }
   button.more { width: 100%; padding: 11px; border-radius: 10px; border: 1px solid var(--line);
                 background: var(--card); color: var(--ink); font: inherit; cursor: pointer; }
@@ -63,6 +68,7 @@
       <option value="cheap">Cheapest now</option>
       <option value="dear">Most expensive now</option>
     </select>
+    <label class="toggle"><input id="buy" type="checkbox"> Only cards listed at or under market price</label>
   </div>
   <div class="note" id="note"></div>
   <div id="list"></div>
@@ -81,6 +87,8 @@ const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls)
   if (text != null) e.textContent = text; return e; };
 const money = (n) => "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const niceDate = (s) => s ? new Date(s + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
+const TOL = 1.03;
+const buyable = (r) => r.buyable != null ? r.buyable : (r.listing != null && r.listing <= r.price * TOL);
 let active = "day", shown = 60;
 
 function init() {
@@ -94,15 +102,16 @@ function init() {
   const sel = $("set");
   sel.appendChild(new Option("All sets", ""));
   [...sets].sort().forEach((s) => sel.appendChild(new Option(s, s)));
-  ["q", "set", "sort"].forEach((id) => $(id).addEventListener("input", () => { shown = 60; draw(); }));
+  ["q", "set", "sort", "buy"].forEach((id) => $(id).addEventListener("input", () => { shown = 60; draw(); }));
   $("foot").textContent = "Market prices from TCGplayer via tcgcsv.com, updated once a day. Tracking since " +
-    niceDate(R.tracking_since) + ". Cards under " + money(R.min_price) + " are left out.";
+    niceDate(R.tracking_since) + ". Cards under " + money(R.min_price) + " are left out. All cards are raw (ungraded). The cheapest listing is for any condition and excludes shipping, so check the copy is Near Mint before buying.";
   draw();
 }
 
 function rowsFor(key) {
   const q = $("q").value.trim().toLowerCase(), set = $("set").value, sort = $("sort").value;
-  let rows = R.sections[key].filter((r) => (!set || r.set === set) &&
+  const only = $("buy").checked;
+  let rows = R.sections[key].filter((r) => (!set || r.set === set) && (!only || buyable(r)) &&
     (!q || (r.name + " " + r.num).toLowerCase().includes(q)));
   const by = { pct: (a, b) => b.pct - a.pct, drop: (a, b) => b.drop - a.drop,
                cheap: (a, b) => a.price - b.price, dear: (a, b) => b.price - a.price }[sort];
@@ -128,7 +137,8 @@ function draw() {
   const list = $("list"); list.textContent = "";
   if (!rows.length) { list.appendChild(el("div", "empty", "Nothing here today with these filters.")); return; }
   rows.slice(0, shown).forEach((r) => {
-    const a = el("a", "row"); a.href = "https://www.tcgplayer.com/product/" + encodeURIComponent(r.id);
+    const ok = buyable(r);
+    const a = el("a", ok ? "row buy" : "row"); a.href = "https://www.tcgplayer.com/product/" + encodeURIComponent(r.id);
     a.target = "_blank"; a.rel = "noopener";
     a.appendChild(el("div", "name", r.name));
     const p = el("div", "price");
@@ -141,9 +151,11 @@ function draw() {
     m.appendChild(document.createTextNode([r.set, r.num ? "#" + r.num : "", r.rarity].filter(Boolean).join(" · ")));
     a.appendChild(m);
     if (r.listing != null) {
-      const high = r.listing > r.price * 1.15;
-      a.appendChild(el("div", "meta", "Cheapest listing " + money(r.listing) +
-        (high ? " \u2014 above market, may not be buyable at this price yet" : "")));
+      const d = el("div", "meta");
+      if (ok) d.appendChild(el("span", "badge", "Listed at market"));
+      d.appendChild(document.createTextNode("Cheapest listing " + money(r.listing) +
+        (ok ? "" : " \u2014 " + Math.round((r.listing / r.price - 1) * 100) + "% above market")));
+      a.appendChild(d);
     }
     list.appendChild(a);
   });
