@@ -1,0 +1,1328 @@
+[
+{
+"id": 604,
+"name": "Base Set",
+"abbr": "BS",
+"published": "1999-01-09"
+},
+{
+"id": 1663,
+"name": "Base Set (Shadowless)",
+"abbr": "BSS",
+"published": "1999-01-09"
+},
+{
+"id": 635,
+"name": "Jungle",
+"abbr": "JU",
+"published": "1999-06-16"
+},
+{
+"id": 1418,
+"name": "WoTC Promo",
+"abbr": "PR",
+"published": "1999-07-01"
+},
+{
+"id": 630,
+"name": "Fossil",
+"abbr": "FO",
+"published": "1999-10-10"
+},
+{
+"id": 605,
+"name": "Base Set 2",
+"abbr": "BS2",
+"published": "2000-02-24"
+},
+{
+"id": 1373,
+"name": "Team Rocket",
+"abbr": "TR",
+"published": "2000-04-24"
+},
+{
+"id": 1441,
+"name": "Gym Heroes",
+"abbr": "G1",
+"published": "2000-10-14"
+},
+{
+"id": 1440,
+"name": "Gym Challenge",
+"abbr": "G2",
+"published": "2000-10-16"
+},
+{
+"id": 1396,
+"name": "Neo Genesis",
+"abbr": "N1",
+"published": "2000-12-16"
+},
+{
+"id": 1434,
+"name": "Neo Discovery",
+"abbr": "N2",
+"published": "2001-06-01"
+},
+{
+"id": 648,
+"name": "Southern Islands",
+"abbr": "SI",
+"published": "2001-07-31"
+},
+{
+"id": 1389,
+"name": "Neo Revelation",
+"abbr": "N3",
+"published": "2001-09-21"
+},
+{
+"id": 1444,
+"name": "Neo Destiny",
+"abbr": "N4",
+"published": "2002-02-28"
+},
+{
+"id": 1374,
+"name": "Legendary Collection",
+"abbr": "LC",
+"published": "2002-05-24"
+},
+{
+"id": 24493,
+"name": "e-Reader Sample Cards",
+"abbr": "SAMPLE",
+"published": "2002-08-02"
+},
+{
+"id": 1375,
+"name": "Expedition",
+"abbr": "EX",
+"published": "2002-09-15"
+},
+{
+"id": 1455,
+"name": "Best of Promos",
+"abbr": "PR",
+"published": "2002-12-01"
+},
+{
+"id": 1397,
+"name": "Aquapolis",
+"abbr": "AQ",
+"published": "2003-01-15"
+},
+{
+"id": 1372,
+"name": "Skyridge",
+"abbr": "SK",
+"published": "2003-05-12"
+},
+{
+"id": 1393,
+"name": "EX Ruby and Sapphire",
+"abbr": "RS",
+"published": "2003-06-18"
+},
+{
+"id": 1392,
+"name": "EX Sandstorm",
+"abbr": "SS",
+"published": "2003-09-18"
+},
+{
+"id": 1376,
+"name": "EX Dragon",
+"abbr": "DR",
+"published": "2003-11-24"
+},
+{
+"id": 1377,
+"name": "EX Team Magma vs Team Aqua",
+"abbr": "MA",
+"published": "2004-03-15"
+},
+{
+"id": 1416,
+"name": "EX Hidden Legends",
+"abbr": "HL",
+"published": "2004-06-14"
+},
+{
+"id": 2214,
+"name": "Kids WB Promos",
+"abbr": "KWBP",
+"published": "2004-07-02"
+},
+{
+"id": 1419,
+"name": "EX FireRed & LeafGreen",
+"abbr": "RG",
+"published": "2004-08-30"
+},
+{
+"id": 1853,
+"name": "EX Battle Stadium",
+"abbr": "BST",
+"published": "2004-10-18"
+},
+{
+"id": 1428,
+"name": "EX Team Rocket Returns",
+"abbr": "RR",
+"published": "2004-11-01"
+},
+{
+"id": 1404,
+"name": "EX Deoxys",
+"abbr": "DX",
+"published": "2005-02-14"
+},
+{
+"id": 1410,
+"name": "EX Emerald",
+"abbr": "EM",
+"published": "2005-05-09"
+},
+{
+"id": 1398,
+"name": "EX Unseen Forces",
+"abbr": "UF",
+"published": "2005-08-22"
+},
+{
+"id": 1429,
+"name": "EX Delta Species",
+"abbr": "DS",
+"published": "2005-10-31"
+},
+{
+"id": 1378,
+"name": "EX Legend Maker",
+"abbr": "LM",
+"published": "2006-02-13"
+},
+{
+"id": 1379,
+"name": "EX Holon Phantoms",
+"abbr": "HP",
+"published": "2006-05-03"
+},
+{
+"id": 1395,
+"name": "EX Crystal Guardians",
+"abbr": "CG",
+"published": "2006-08-30"
+},
+{
+"id": 1411,
+"name": "EX Dragon Frontiers",
+"abbr": "DF",
+"published": "2006-11-08"
+},
+{
+"id": 1383,
+"name": "EX Power Keepers",
+"abbr": "PK",
+"published": "2007-02-01"
+},
+{
+"id": 1421,
+"name": "Diamond and Pearl Promos",
+"abbr": "PR",
+"published": "2007-05-01"
+},
+{
+"id": 1430,
+"name": "Diamond and Pearl",
+"abbr": "DP",
+"published": "2007-05-23"
+},
+{
+"id": 1368,
+"name": "Mysterious Treasures",
+"abbr": "MT",
+"published": "2007-08-22"
+},
+{
+"id": 1541,
+"name": "DP Trainer Kit: Manaphy & Lucario",
+"abbr": "PR",
+"published": "2007-09-03"
+},
+{
+"id": 609,
+"name": "DP Training Kit 1 Blue",
+"abbr": "PR",
+"published": "2007-09-24"
+},
+{
+"id": 610,
+"name": "DP Training Kit 1 Gold",
+"abbr": "PR",
+"published": "2007-09-24"
+},
+{
+"id": 1380,
+"name": "Secret Wonders",
+"abbr": "SW",
+"published": "2007-11-07"
+},
+{
+"id": 1405,
+"name": "Great Encounters",
+"abbr": "GE",
+"published": "2008-02-13"
+},
+{
+"id": 1390,
+"name": "Majestic Dawn",
+"abbr": "MD",
+"published": "2008-05-21"
+},
+{
+"id": 1417,
+"name": "Legends Awakened",
+"abbr": "LA",
+"published": "2008-08-20"
+},
+{
+"id": 2155,
+"name": "Countdown Calendar Promos",
+"abbr": "CCP",
+"published": "2008-10-01"
+},
+{
+"id": 1369,
+"name": "Stormfront",
+"abbr": "SF",
+"published": "2008-11-05"
+},
+{
+"id": 1406,
+"name": "Platinum",
+"abbr": "PL",
+"published": "2009-02-11"
+},
+{
+"id": 1367,
+"name": "Rising Rivals",
+"abbr": "RR",
+"published": "2009-05-16"
+},
+{
+"id": 1384,
+"name": "Supreme Victors",
+"abbr": "SV",
+"published": "2009-08-19"
+},
+{
+"id": 1391,
+"name": "Arceus",
+"abbr": "AR",
+"published": "2009-11-04"
+},
+{
+"id": 1433,
+"name": "Rumble",
+"abbr": "RUM",
+"published": "2009-11-16"
+},
+{
+"id": 1453,
+"name": "HGSS Promos",
+"abbr": "PR",
+"published": "2010-02-01"
+},
+{
+"id": 1402,
+"name": "HeartGold SoulSilver",
+"abbr": "HS",
+"published": "2010-02-10"
+},
+{
+"id": 1399,
+"name": "Unleashed",
+"abbr": "UL",
+"published": "2010-05-12"
+},
+{
+"id": 1540,
+"name": "HGSS Trainer Kit: Gyarados & Raichu",
+"abbr": "PR",
+"published": "2010-05-12"
+},
+{
+"id": 1403,
+"name": "Undaunted",
+"abbr": "UD",
+"published": "2010-08-18"
+},
+{
+"id": 1381,
+"name": "Triumphant",
+"abbr": "TM",
+"published": "2010-11-03"
+},
+{
+"id": 1415,
+"name": "Call of Legends",
+"abbr": "CL",
+"published": "2011-02-09"
+},
+{
+"id": 1400,
+"name": "Black and White",
+"abbr": "BLW",
+"published": "2011-04-25"
+},
+{
+"id": 1407,
+"name": "Black and White Promos",
+"abbr": "PR",
+"published": "2011-04-25"
+},
+{
+"id": 1401,
+"name": "McDonald's Promos 2011",
+"abbr": "M11",
+"published": "2011-06-17"
+},
+{
+"id": 1424,
+"name": "Emerging Powers",
+"abbr": "EPO",
+"published": "2011-08-31"
+},
+{
+"id": 1538,
+"name": "BW Trainer Kit: Excadrill & Zoroark",
+"abbr": "BLW",
+"published": "2011-09-05"
+},
+{
+"id": 1385,
+"name": "Noble Victories",
+"abbr": "NVI",
+"published": "2011-11-16"
+},
+{
+"id": 1412,
+"name": "Next Destinies",
+"abbr": "NXD",
+"published": "2012-02-08"
+},
+{
+"id": 1386,
+"name": "Dark Explorers",
+"abbr": "DEX",
+"published": "2012-05-09"
+},
+{
+"id": 1427,
+"name": "McDonald's Promos 2012",
+"abbr": "M12",
+"published": "2012-06-15"
+},
+{
+"id": 1394,
+"name": "Dragons Exalted",
+"abbr": "DRX",
+"published": "2012-08-15"
+},
+{
+"id": 1426,
+"name": "Dragon Vault",
+"abbr": "DRV",
+"published": "2012-10-05"
+},
+{
+"id": 1408,
+"name": "Boundaries Crossed",
+"abbr": "BCR",
+"published": "2012-11-07"
+},
+{
+"id": 1413,
+"name": "Plasma Storm",
+"abbr": "PLS",
+"published": "2013-02-06"
+},
+{
+"id": 1382,
+"name": "Plasma Freeze",
+"abbr": "PLF",
+"published": "2013-05-08"
+},
+{
+"id": 1370,
+"name": "Plasma Blast",
+"abbr": "PLB",
+"published": "2013-08-14"
+},
+{
+"id": 1409,
+"name": "Legendary Treasures",
+"abbr": "LTR",
+"published": "2013-11-06"
+},
+{
+"id": 1465,
+"name": "Legendary Treasures: Radiant Collection",
+"abbr": "LTR",
+"published": "2013-11-06"
+},
+{
+"id": 1522,
+"name": "Kalos Starter Set",
+"abbr": "KSS",
+"published": "2013-11-08"
+},
+{
+"id": 1451,
+"name": "XY Promos",
+"abbr": "PR",
+"published": "2013-12-16"
+},
+{
+"id": 1387,
+"name": "XY Base Set",
+"abbr": "XY",
+"published": "2014-02-05"
+},
+{
+"id": 1532,
+"name": "XY Trainer Kit: Sylveon & Noivern",
+"abbr": "PR",
+"published": "2014-03-12"
+},
+{
+"id": 1464,
+"name": "XY - Flashfire",
+"abbr": "FLF",
+"published": "2014-05-07"
+},
+{
+"id": 1692,
+"name": "McDonald's Promos 2014",
+"abbr": "M14",
+"published": "2014-05-23"
+},
+{
+"id": 1481,
+"name": "XY - Furious Fists",
+"abbr": "FFI",
+"published": "2014-08-13"
+},
+{
+"id": 1494,
+"name": "XY - Phantom Forces",
+"abbr": "PHF",
+"published": "2014-11-05"
+},
+{
+"id": 1533,
+"name": "XY Trainer Kit: Bisharp & Wigglytuff",
+"abbr": "PR",
+"published": "2014-11-14"
+},
+{
+"id": 1509,
+"name": "XY - Primal Clash",
+"abbr": "PRC",
+"published": "2015-02-04"
+},
+{
+"id": 1525,
+"name": "Double Crisis",
+"abbr": "DCR",
+"published": "2015-03-25"
+},
+{
+"id": 1528,
+"name": "Jumbo Cards",
+"abbr": "PR",
+"published": "2015-04-01"
+},
+{
+"id": 1536,
+"name": "XY Trainer Kit: Latias & Latios",
+"abbr": "PR",
+"published": "2015-04-29"
+},
+{
+"id": 1534,
+"name": "XY - Roaring Skies",
+"abbr": "ROS",
+"published": "2015-05-06"
+},
+{
+"id": 1576,
+"name": "XY - Ancient Origins",
+"abbr": "AOR",
+"published": "2015-08-12"
+},
+{
+"id": 1661,
+"name": "XY - BREAKthrough",
+"abbr": "BKT",
+"published": "2015-11-04"
+},
+{
+"id": 1694,
+"name": "McDonald's Promos 2015",
+"abbr": "M15",
+"published": "2015-11-23"
+},
+{
+"id": 1701,
+"name": "XY - BREAKpoint",
+"abbr": "BKP",
+"published": "2016-02-03"
+},
+{
+"id": 1728,
+"name": "Generations",
+"abbr": "GEN",
+"published": "2016-02-22"
+},
+{
+"id": 1729,
+"name": "Generations: Radiant Collection",
+"abbr": "GEN",
+"published": "2016-02-22"
+},
+{
+"id": 1796,
+"name": "XY Trainer Kit: Pikachu Libre & Suicune",
+"abbr": "PR",
+"published": "2016-04-27"
+},
+{
+"id": 1780,
+"name": "XY - Fates Collide",
+"abbr": "FCO",
+"published": "2016-05-02"
+},
+{
+"id": 1539,
+"name": "League & Championship Cards",
+"abbr": "PR",
+"published": "2016-06-01"
+},
+{
+"id": 1815,
+"name": "XY - Steam Siege",
+"abbr": "STS",
+"published": "2016-08-03"
+},
+{
+"id": 3087,
+"name": "McDonald's Promos 2016",
+"abbr": "M16",
+"published": "2016-08-05"
+},
+{
+"id": 1840,
+"name": "Deck Exclusives",
+"abbr": "PR",
+"published": "2016-09-01"
+},
+{
+"id": 1842,
+"name": "XY - Evolutions",
+"abbr": "EVO",
+"published": "2016-11-02"
+},
+{
+"id": 1861,
+"name": "SM Promos",
+"abbr": "SMP",
+"published": "2016-12-14"
+},
+{
+"id": 1863,
+"name": "SM Base Set",
+"abbr": "SM01",
+"published": "2017-02-03"
+},
+{
+"id": 2069,
+"name": "SM Trainer Kit: Lycanroc & Alolan Raichu",
+"abbr": "SMK1",
+"published": "2017-04-21"
+},
+{
+"id": 23095,
+"name": "Ash vs Team Rocket Deck Kit (JP Exclusive)",
+"abbr": "AVTR",
+"published": "2017-04-21"
+},
+{
+"id": 1919,
+"name": "SM - Guardians Rising",
+"abbr": "SM02",
+"published": "2017-05-05"
+},
+{
+"id": 1957,
+"name": "SM - Burning Shadows",
+"abbr": "SM03",
+"published": "2017-08-04"
+},
+{
+"id": 2054,
+"name": "Shining Legends",
+"abbr": "SHL",
+"published": "2017-10-06"
+},
+{
+"id": 2071,
+"name": "SM - Crimson Invasion",
+"abbr": "SM04",
+"published": "2017-11-03"
+},
+{
+"id": 2148,
+"name": "McDonald's Promos 2017",
+"abbr": "M17",
+"published": "2017-11-07"
+},
+{
+"id": 2178,
+"name": "SM - Ultra Prism",
+"abbr": "SM05",
+"published": "2018-02-02"
+},
+{
+"id": 2208,
+"name": "SM Trainer Kit: Alolan Sandslash & Alolan Ninetales",
+"abbr": "SMK2",
+"published": "2018-04-06"
+},
+{
+"id": 2209,
+"name": "SM - Forbidden Light",
+"abbr": "SM06",
+"published": "2018-05-04"
+},
+{
+"id": 2282,
+"name": "World Championship Decks",
+"abbr": "WCD",
+"published": "2018-07-01"
+},
+{
+"id": 2278,
+"name": "SM - Celestial Storm",
+"abbr": "CES",
+"published": "2018-08-03"
+},
+{
+"id": 2295,
+"name": "Dragon Majesty",
+"abbr": "DRM",
+"published": "2018-09-07"
+},
+{
+"id": 2328,
+"name": "SM - Lost Thunder",
+"abbr": "SM8",
+"published": "2018-11-02"
+},
+{
+"id": 2364,
+"name": "McDonald's Promos 2018",
+"abbr": "M18",
+"published": "2018-11-02"
+},
+{
+"id": 2377,
+"name": "SM - Team Up",
+"abbr": "SM9",
+"published": "2019-02-01"
+},
+{
+"id": 2409,
+"name": "Detective Pikachu",
+"abbr": "DEP",
+"published": "2019-04-05"
+},
+{
+"id": 2420,
+"name": "SM - Unbroken Bonds",
+"abbr": "SM10",
+"published": "2019-05-03"
+},
+{
+"id": 2464,
+"name": "SM - Unified Minds",
+"abbr": "SM11",
+"published": "2019-08-02"
+},
+{
+"id": 2480,
+"name": "Hidden Fates",
+"abbr": "HIF",
+"published": "2019-08-23"
+},
+{
+"id": 2594,
+"name": "Hidden Fates: Shiny Vault",
+"abbr": "HIF:SV",
+"published": "2019-08-23"
+},
+{
+"id": 2555,
+"name": "McDonald's Promos 2019",
+"abbr": "M19",
+"published": "2019-10-01"
+},
+{
+"id": 2534,
+"name": "SM - Cosmic Eclipse",
+"abbr": "SM12",
+"published": "2019-11-01"
+},
+{
+"id": 2545,
+"name": "SWSH: Sword & Shield Promo Cards",
+"abbr": "SWSD",
+"published": "2019-11-15"
+},
+{
+"id": 2585,
+"name": "SWSH01: Sword & Shield Base Set",
+"abbr": "SWSH01",
+"published": "2020-02-07"
+},
+{
+"id": 2626,
+"name": "SWSH02: Rebel Clash",
+"abbr": "SWSH02",
+"published": "2020-05-01"
+},
+{
+"id": 2686,
+"name": "Battle Academy",
+"abbr": "BTA",
+"published": "2020-07-31"
+},
+{
+"id": 2675,
+"name": "SWSH03: Darkness Ablaze",
+"abbr": "SWSH03",
+"published": "2020-08-14"
+},
+{
+"id": 2685,
+"name": "Champion's Path",
+"abbr": "CHP",
+"published": "2020-09-25"
+},
+{
+"id": 2701,
+"name": "SWSH04: Vivid Voltage",
+"abbr": "SWSH04",
+"published": "2020-11-13"
+},
+{
+"id": 2782,
+"name": "McDonald's 25th Anniversary Promos",
+"abbr": "M21",
+"published": "2021-02-09"
+},
+{
+"id": 2754,
+"name": "Shining Fates",
+"abbr": "SHF",
+"published": "2021-02-19"
+},
+{
+"id": 2781,
+"name": "Shining Fates: Shiny Vault",
+"abbr": "SHFSV",
+"published": "2021-02-19"
+},
+{
+"id": 2765,
+"name": "SWSH05: Battle Styles",
+"abbr": "SWSH05",
+"published": "2021-03-19"
+},
+{
+"id": 2807,
+"name": "SWSH06: Chilling Reign",
+"abbr": "SWSH06",
+"published": "2021-06-18"
+},
+{
+"id": 2848,
+"name": "SWSH07: Evolving Skies",
+"abbr": "SWSH07",
+"published": "2021-08-27"
+},
+{
+"id": 2867,
+"name": "Celebrations",
+"abbr": "CLB",
+"published": "2021-10-08"
+},
+{
+"id": 2931,
+"name": "Celebrations: Classic Collection",
+"abbr": "CCC",
+"published": "2021-10-08"
+},
+{
+"id": 2906,
+"name": "SWSH08: Fusion Strike",
+"abbr": "SWSH08",
+"published": "2021-11-12"
+},
+{
+"id": 2948,
+"name": "SWSH09: Brilliant Stars",
+"abbr": "SWSH09",
+"published": "2022-02-25"
+},
+{
+"id": 3020,
+"name": "SWSH09: Brilliant Stars Trainer Gallery",
+"abbr": "SWSH09:TG",
+"published": "2022-02-25"
+},
+{
+"id": 3051,
+"name": "Battle Academy 2022",
+"abbr": "BA22",
+"published": "2022-04-01"
+},
+{
+"id": 3040,
+"name": "SWSH10: Astral Radiance",
+"abbr": "SWSH10",
+"published": "2022-05-27"
+},
+{
+"id": 3068,
+"name": "SWSH10: Astral Radiance Trainer Gallery",
+"abbr": "SWSH10:TG",
+"published": "2022-05-27"
+},
+{
+"id": 3064,
+"name": "Pokemon GO",
+"abbr": "PGO",
+"published": "2022-07-01"
+},
+{
+"id": 3150,
+"name": "McDonald's Promos 2022",
+"abbr": "M22",
+"published": "2022-08-03"
+},
+{
+"id": 3179,
+"name": "Trick or Trade BOOster Bundle",
+"abbr": "TTBB",
+"published": "2022-09-01"
+},
+{
+"id": 3118,
+"name": "SWSH11: Lost Origin",
+"abbr": "SWSH11",
+"published": "2022-09-09"
+},
+{
+"id": 3172,
+"name": "SWSH11: Lost Origin Trainer Gallery",
+"abbr": "SWSH11: TG",
+"published": "2022-09-09"
+},
+{
+"id": 3170,
+"name": "SWSH12: Silver Tempest",
+"abbr": "SWSH12",
+"published": "2022-11-11"
+},
+{
+"id": 17674,
+"name": "SWSH12: Silver Tempest Trainer Gallery",
+"abbr": "SWSH12: TG",
+"published": "2022-11-11"
+},
+{
+"id": 22880,
+"name": "Prize Pack Series Cards",
+"abbr": "",
+"published": "2022-11-30"
+},
+{
+"id": 17688,
+"name": "SWSH: Crown Zenith",
+"abbr": "CRZ",
+"published": "2023-01-20"
+},
+{
+"id": 17689,
+"name": "SWSH: Crown Zenith: Galarian Gallery",
+"abbr": "CRZ:GG",
+"published": "2023-01-20"
+},
+{
+"id": 22872,
+"name": "SV: Scarlet & Violet Promo Cards",
+"abbr": "SVP",
+"published": "2023-03-31"
+},
+{
+"id": 22873,
+"name": "SV01: Scarlet & Violet Base Set",
+"abbr": "SVI",
+"published": "2023-03-31"
+},
+{
+"id": 24382,
+"name": "SVE: Scarlet & Violet Energies",
+"abbr": "SVE",
+"published": "2023-03-31"
+},
+{
+"id": 23120,
+"name": "SV02: Paldea Evolved",
+"abbr": "PAL",
+"published": "2023-06-09"
+},
+{
+"id": 24864,
+"name": "Southeast Asia Exclusives",
+"abbr": "SEA",
+"published": "2023-08-05"
+},
+{
+"id": 23228,
+"name": "SV03: Obsidian Flames",
+"abbr": "OBF",
+"published": "2023-08-11"
+},
+{
+"id": 23266,
+"name": "Trick or Trade BOOster Bundle 2023",
+"abbr": "TTBB23",
+"published": "2023-09-01"
+},
+{
+"id": 23306,
+"name": "McDonald's Promos 2023",
+"abbr": "M23",
+"published": "2023-09-12"
+},
+{
+"id": 23237,
+"name": "SV: Scarlet & Violet 151",
+"abbr": "MEW",
+"published": "2023-09-22"
+},
+{
+"id": 23330,
+"name": "My First Battle",
+"abbr": "",
+"published": "2023-09-29"
+},
+{
+"id": 23286,
+"name": "SV04: Paradox Rift",
+"abbr": "PAR",
+"published": "2023-11-03"
+},
+{
+"id": 23323,
+"name": "Trading Card Game Classic",
+"abbr": "CL",
+"published": "2023-11-17"
+},
+{
+"id": 23353,
+"name": "SV: Paldean Fates",
+"abbr": "PAF",
+"published": "2024-01-26"
+},
+{
+"id": 23381,
+"name": "SV05: Temporal Forces",
+"abbr": "TEF",
+"published": "2024-03-22"
+},
+{
+"id": 23473,
+"name": "SV06: Twilight Masquerade",
+"abbr": "TWM",
+"published": "2024-05-24"
+},
+{
+"id": 23520,
+"name": "Battle Academy 2024",
+"abbr": "BA24",
+"published": "2024-06-21"
+},
+{
+"id": 23529,
+"name": "SV: Shrouded Fable",
+"abbr": "SFA",
+"published": "2024-08-02"
+},
+{
+"id": 23561,
+"name": "Trick or Trade BOOster Bundle 2024",
+"abbr": "TTBB24",
+"published": "2024-08-30"
+},
+{
+"id": 23537,
+"name": "SV07: Stellar Crown",
+"abbr": "SCR",
+"published": "2024-09-13"
+},
+{
+"id": 23651,
+"name": "SV08: Surging Sparks",
+"abbr": "SSP",
+"published": "2024-11-08"
+},
+{
+"id": 23821,
+"name": "SV: Prismatic Evolutions",
+"abbr": "PRE",
+"published": "2025-01-17"
+},
+{
+"id": 24163,
+"name": "McDonald's Promos 2024",
+"abbr": "M24",
+"published": "2025-01-21"
+},
+{
+"id": 24073,
+"name": "SV09: Journey Together",
+"abbr": "JTG",
+"published": "2025-03-28"
+},
+{
+"id": 24269,
+"name": "SV10: Destined Rivals",
+"abbr": "DRI",
+"published": "2025-05-30"
+},
+{
+"id": 24325,
+"name": "SV: Black Bolt",
+"abbr": "BLK",
+"published": "2025-07-18"
+},
+{
+"id": 24326,
+"name": "SV: White Flare",
+"abbr": "WHT",
+"published": "2025-07-18"
+},
+{
+"id": 24380,
+"name": "ME01: Mega Evolution",
+"abbr": "MEG",
+"published": "2025-09-26"
+},
+{
+"id": 24451,
+"name": "ME: Mega Evolution Promo",
+"abbr": "MEP",
+"published": "2025-09-26"
+},
+{
+"id": 24461,
+"name": "MEE: Mega Evolution Energies",
+"abbr": "MEE",
+"published": "2025-09-26"
+},
+{
+"id": 24448,
+"name": "ME02: Phantasmal Flames",
+"abbr": "PFL",
+"published": "2025-11-14"
+},
+{
+"id": 24529,
+"name": "Player Placement Trainer Promos",
+"abbr": "",
+"published": "2026-01-02"
+},
+{
+"id": 24541,
+"name": "ME: Ascended Heroes",
+"abbr": "ASC",
+"published": "2026-01-30"
+},
+{
+"id": 24587,
+"name": "ME03: Perfect Order",
+"abbr": "POR",
+"published": "2026-03-27"
+},
+{
+"id": 24584,
+"name": "First Partner Collection 2026",
+"abbr": "",
+"published": "2026-03-30"
+},
+{
+"id": 24655,
+"name": "ME04: Chaos Rising",
+"abbr": "CRI",
+"published": "2026-05-22"
+},
+{
+"id": 24688,
+"name": "ME05: Pitch Black",
+"abbr": "PBL",
+"published": "2026-07-17"
+},
+{
+"id": 24722,
+"name": "ME: 30th Celebration",
+"abbr": "30C",
+"published": "2026-09-16"
+},
+{
+"id": 24837,
+"name": "ME: 30th Celebration Classic Collection",
+"abbr": "30C",
+"published": "2026-09-16"
+},
+{
+"id": 24831,
+"name": "ME06: Delta Reign",
+"abbr": "DLR",
+"published": "2026-11-06"
+},
+{
+"id": 24938,
+"name": "McDonald's Promos 2026",
+"abbr": "M26",
+"published": "2026-11-06"
+},
+{
+"id": 1414,
+"name": "POP Series 7",
+"abbr": "POP",
+"published": "2026-11-11"
+},
+{
+"id": 1422,
+"name": "POP Series 1",
+"abbr": "POP",
+"published": "2026-11-11"
+},
+{
+"id": 1423,
+"name": "Nintendo Promos",
+"abbr": "PR",
+"published": "2026-11-11"
+},
+{
+"id": 1432,
+"name": "POP Series 6",
+"abbr": "POP",
+"published": "2026-11-11"
+},
+{
+"id": 1439,
+"name": "POP Series 5",
+"abbr": "POP",
+"published": "2026-11-11"
+},
+{
+"id": 1442,
+"name": "POP Series 3",
+"abbr": "POP",
+"published": "2026-11-11"
+},
+{
+"id": 1446,
+"name": "POP Series 9",
+"abbr": "POP",
+"published": "2026-11-11"
+},
+{
+"id": 1447,
+"name": "POP Series 2",
+"abbr": "POP",
+"published": "2026-11-11"
+},
+{
+"id": 1450,
+"name": "POP Series 8",
+"abbr": "POP",
+"published": "2026-11-11"
+},
+{
+"id": 1452,
+"name": "POP Series 4",
+"abbr": "POP",
+"published": "2026-11-11"
+},
+{
+"id": 1542,
+"name": "EX Trainer Kit 2: Plusle & Minun",
+"abbr": "PR",
+"published": "2026-11-11"
+},
+{
+"id": 1543,
+"name": "EX Trainer Kit 1: Latias & Latios",
+"abbr": "PR",
+"published": "2026-11-11"
+},
+{
+"id": 1938,
+"name": "Alternate Art Promos",
+"abbr": "PR",
+"published": "2026-11-11"
+},
+{
+"id": 2175,
+"name": "Burger King Promos",
+"abbr": "BKP",
+"published": "2026-11-11"
+},
+{
+"id": 2205,
+"name": "Pikachu World Collection Promos",
+"abbr": "PWCP",
+"published": "2026-11-11"
+},
+{
+"id": 2289,
+"name": "Blister Exclusives",
+"abbr": "BLE",
+"published": "2026-11-11"
+},
+{
+"id": 2332,
+"name": "Professor Program Promos",
+"abbr": "PPP",
+"published": "2026-11-11"
+},
+{
+"id": 2374,
+"name": "Miscellaneous Cards & Products",
+"abbr": "MCAP",
+"published": "2026-11-11"
+},
+{
+"id": 2776,
+"name": "First Partner Pack",
+"abbr": "FPP",
+"published": "2026-11-11"
+}
+]
