@@ -64,7 +64,14 @@ def tracked_groups(cfg):
     excl = [s.lower() for s in cfg.get("exclude_set_names_containing", [])]
     only = [s.lower() for s in cfg.get("only_set_names_containing", [])]
     out = []
-    for g in fetch_json(f"tcgplayer/{cfg['category_id']}/groups"):
+    all_groups = fetch_json(f"tcgplayer/{cfg['category_id']}/groups")
+    # full list of every set the source has, so the tracked list can be audited
+    (ROOT / "report").mkdir(exist_ok=True)
+    (ROOT / "report" / "all_sets.json").write_text(json.dumps(sorted(
+        [{"id": int(g["groupId"]), "name": g.get("name"), "abbr": g.get("abbreviation"),
+          "published": (g.get("publishedOn") or "")[:10]} for g in all_groups],
+        key=lambda g: (g["published"], g["id"])), ensure_ascii=False, indent=0))
+    for g in all_groups:
         name = g.get("name") or ""
         published = (g.get("publishedOn") or "")[:10]
         if not published or published < cutoff:
