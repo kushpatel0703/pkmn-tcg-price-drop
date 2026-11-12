@@ -161,8 +161,11 @@ def score_card(price, listing, series, months, undated, buyable_within_pct=3, su
     if not undated and months is not None:
         why.append("set released this month" if months < 1 else f"set is {round(months)} months old")
     if supply and supply["state"] != "steady" and not (supply["state"] == "tightening" and not tightening):
-        why.append(f"sealed product up {abs(round(supply['chg30']))}% in 30 days, supply tightening" if tightening
-                   else f"sealed product down {abs(round(supply['chg30']))}% in 30 days, still plentiful")
+        # quote whichever window shows the move more clearly
+        c30, c90 = supply["chg30"], supply.get("chg90")
+        pct, span = (c90, "90 days") if c90 is not None and abs(c90) > abs(c30) else (c30, "30 days")
+        why.append(f"sealed product up {abs(round(pct))}% in {span}, supply tightening" if tightening
+                   else f"sealed product down {abs(round(pct))}% in {span}, still plentiful")
     if listing is not None:
         gap = listing / price - 1
         why.append("a copy is listed at market" if gap <= buyable_within_pct / 100
