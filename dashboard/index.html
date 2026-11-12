@@ -140,6 +140,11 @@ function draw() {
     m.appendChild(el("span", "chip", r.printing));
     m.appendChild(document.createTextNode([r.set, r.num ? "#" + r.num : "", r.rarity].filter(Boolean).join(" · ")));
     a.appendChild(m);
+    if (r.listing != null) {
+      const high = r.listing > r.price * 1.15;
+      a.appendChild(el("div", "meta", "Cheapest listing " + money(r.listing) +
+        (high ? " \u2014 above market, may not be buyable at this price yet" : "")));
+    }
     list.appendChild(a);
   });
   if (rows.length > shown) {
