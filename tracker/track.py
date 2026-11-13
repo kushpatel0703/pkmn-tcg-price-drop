@@ -400,6 +400,8 @@ def history(cfg, groups, today, set_cards):
                     checked.setdefault(day, set()).update(gids)
                 continue
             print(f"history: stopping at {day}: {e}")
+            if e.status in (403, 429):
+                print("history: tcgcsv asked us to slow down")
             break
         rows = [r for gid in gids for r in found.get(gid, [])]
         if kind == "missing":
