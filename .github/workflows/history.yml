@@ -1,0 +1,52 @@
+name: Load price history (one-time)
+
+# Loads tcgcsv's daily price archives back to Feb 2024, gently: one archive
+# about every 30 seconds, 60 per run, a few runs a day. Each day is downloaded
+# once. When nothing is left to load, runs finish in seconds; this workflow
+# can then be disabled or deleted.
+
+on:
+  schedule:
+    - cron: "17 1,7,13 * * *"   # three times a day, away from the daily run at 21:40 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-price-drops      # shared with the daily run so they never overlap
+  cancel-in-progress: false
+
+jobs:
+  history:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Make sure 7z is available
+        run: which 7z || (sudo apt-get update && sudo apt-get install -y p7zip-full)
+      - name: Load missing history
+        env:
+          ARCHIVES_PER_RUN: "60"
+          TCGCSV_ARCHIVE_PAUSE: "30"
+        run: python3 tracker/track.py --history-only
+      - name: Save results
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "price-drop-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data
+          git diff --cached --quiet && echo "nothing new" && exit 0
+          git commit -m "Price history from archives"
+          remote="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          for i in 1 2 3; do
+            git pull --rebase "$remote" main && git push "$remote" HEAD:main && exit 0
+            git rebase --abort 2>/dev/null || true
+            sleep 10
+          done
+          exit 1

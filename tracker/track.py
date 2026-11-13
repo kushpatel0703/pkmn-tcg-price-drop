@@ -345,10 +345,13 @@ def history(cfg, groups, today, set_cards):
     have = snapshot_days()
     have_set = set(have)
     t = today
-    limit = cfg.get("archives_per_run", 10)
+    limit = int(os.environ.get("ARCHIVES_PER_RUN") or cfg.get("archives_per_run", 10))
     work = []   # (day, kind, group_ids)
+    start = cfg.get("history_start", "2024-02-08")   # tcgcsv's archives begin here
     for b in range(1, cfg["backfill_days"] + 1):
         d = (t - dt.timedelta(days=b)).isoformat()
+        if d < start:
+            break
         if d not in have_set and d not in unavailable:
             work.append((d, "missing", [g["id"] for g in groups]))
     # sets with prices today but none on an earlier day they already existed
@@ -604,7 +607,29 @@ def write_outputs(report):
 
 # ---------------------------------------------------------------- main
 
+def history_only():
+    """Load missing history from the archives without fetching today's prices
+    (used by the one-time history workflow). Uses the cached product lists."""
+    cfg = json.loads((ROOT / "config.json").read_text())
+    days = snapshot_days()
+    if not days:
+        sys.exit("no snapshots yet; run the daily job first")
+    try:
+        groups = tracked_groups(cfg)
+    except FetchError as e:
+        sys.exit(f"FAILED: {e}")
+    set_cards = {}
+    for g in groups:
+        f = PROD_DIR / f"{g['id']}.json"
+        if f.exists():
+            set_cards[g["id"]] = {int(p) for p in json.loads(f.read_text())["cards"]}
+    history(cfg, groups, dt.date.fromisoformat(days[-1]), set_cards)
+    print(f"history now covers {len(snapshot_days())} days, from {snapshot_days()[0]}")
+
+
 def main():
+    if "--history-only" in sys.argv:
+        return history_only()
     cfg = json.loads((ROOT / "config.json").read_text())
     try:
         today = source_date()

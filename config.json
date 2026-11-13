@@ -3,7 +3,7 @@
   "sets_published_on_or_after": "2020-02-01",
   "exclude_set_names_containing": [],
   "only_set_names_containing": [],
-  "backfill_days": 365,
+  "backfill_days": 1100,
   "min_price": 1.0,
   "thresholds": {
     "day": {
@@ -35,7 +35,7 @@
   "set_dates": {
     "2776": "2021-02-01"
   },
-  "_notes": "min_set_id drops old sets the source lists without a real release date (POP Series, Nintendo Promos, EX Trainer Kits...). include_set_ids: 2545 = SWSH Sword & Shield Promo Cards (dated Nov 2019). exclude_set_ids: 2374 = Miscellaneous Cards & Products. set_dates fixes release dates the source lacks (2776 = First Partner Pack). undated_set_ids are promo groups that span years (SWSH/SV/ME promos, Prize Pack Series, Southeast Asia Exclusives), so set age is ignored for them and a card's own first-seen date is used instead. backfill_days: how far back history is loaded from tcgcsv's archives, archives_per_run at a time on the daily run only. max_rows_per_set caps each drop section per set; stable-price cards are never capped. Record lows need 60 days of the card's own history.",
+  "_notes": "min_set_id drops old sets the source lists without a real release date (POP Series, Nintendo Promos, EX Trainer Kits...). include_set_ids: 2545 = SWSH Sword & Shield Promo Cards (dated Nov 2019). exclude_set_ids: 2374 = Miscellaneous Cards & Products. set_dates fixes release dates the source lacks (2776 = First Partner Pack). undated_set_ids are promo groups that span years (SWSH/SV/ME promos, Prize Pack Series, Southeast Asia Exclusives), so set age is ignored for them and a card's own first-seen date is used instead. backfill_days: how far back history is loaded from tcgcsv's archives, archives_per_run at a time on the daily run only. max_rows_per_set caps each drop section per set; stable-price cards are never capped. Record lows need 60 days of the card's own history. history_start: tcgcsv's archives begin 2024-02-08; backfill_days reaches back to it.",
   "undated_set_ids": [
     2545,
     22872,
@@ -44,5 +44,6 @@
     24864
   ],
   "max_rows_per_set": 40,
-  "archives_per_run": 10
+  "archives_per_run": 10,
+  "history_start": "2024-02-08"
 }
