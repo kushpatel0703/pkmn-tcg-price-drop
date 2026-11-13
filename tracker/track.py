@@ -362,13 +362,22 @@ def history(cfg, groups, today, set_cards):
     today_snap = read_snapshot(SNAP_DIR / f"{t.isoformat()}.csv.gz")
     today_pids = {k[0] for k in today_snap}
     live = [g for g in groups if len(set_cards.get(g["id"], set()) & today_pids) >= 5]
-    for d in reversed(have):
+    # which live sets have card prices on each earlier day
+    present = {}
+    for d in have:
         if d >= t.isoformat() or d in unavailable:
             continue
         snap_pids = {k[0] for k in read_snapshot(SNAP_DIR / f"{d}.csv.gz")}
+        present[d] = {g["id"] for g in live if set_cards.get(g["id"], set()) & snap_pids}
+    first_seen = {}
+    for d in sorted(present):
+        for gid in present[d]:
+            first_seen.setdefault(gid, d)
+    # a gap is a day missing a set that had prices on an earlier day (a hole), not the
+    # stretch before the source started pricing it
+    for d in sorted(present, reverse=True):
         gaps = [g["id"] for g in live
-                if g["published"] <= (dt.date.fromisoformat(d) - dt.timedelta(days=7)).isoformat()
-                and not (set_cards.get(g["id"], set()) & snap_pids)
+                if g["id"] not in present[d] and first_seen.get(g["id"], "9999") < d
                 and g["id"] not in checked.get(d, set())]
         if gaps:
             work.append((d, "gaps", gaps))
