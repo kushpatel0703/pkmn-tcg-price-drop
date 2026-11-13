@@ -97,7 +97,6 @@
 <script>
 const R = /*__REPORT__*/null;
 const SECTIONS = [
-  { key: "buy",    label: "Reasonable buys", was: "90-day avg" },
   { key: "stable", label: "Stable",       was: "90-day avg" },
   { key: "day",    label: "24 hours",     was: "previous day" },
   { key: "week",   label: "7 days",       was: "a week ago" },
@@ -106,14 +105,14 @@ const SECTIONS = [
 ];
 const SORTS = [["auto", "Default order"], ["setnum", "Set, then card number"], ["pct", "Biggest % change"],
                ["drop", "Biggest $ change"], ["cheap", "Cheapest now"], ["dear", "Most expensive now"]];
-const LABELS = ["Reasonable time to buy", "Stable price", "Some movement", "Volatile", "Wait, still falling", "Wait, price spiking", "Wait, too new"];
+const LABELS = ["Stable price", "Some movement", "Volatile", "Wait, still falling", "Wait, price spiking", "Wait, too new"];
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls;
   if (text != null) e.textContent = text; return e; };
 const money = (n) => "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const niceDate = (s) => s ? new Date(s + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
 const numKey = (n) => { const m = String(n || "").match(/\d+/); return m ? parseInt(m[0], 10) : 1e9; };
-let active = "buy", shown = 60;
+let active = "stable", shown = 60;
 
 function fill(sel, opts) { opts.forEach(([v, t]) => { const o = document.createElement("option"); o.value = v; o.textContent = t; sel.appendChild(o); }); }
 
@@ -123,9 +122,7 @@ function init() {
   R.thresholds = R.thresholds || {}; R.compared = R.compared || {}; R.totals = R.totals || {};
   $("sub").textContent = "Prices for " + niceDate(R.date) +
     (R.cards_over_min != null ? " · " + R.cards_over_min.toLocaleString() + " card printings over " + money(R.min_price || 1) : "") +
-    " · " + (R.sets_tracked || 0) + " sets" +
-    (R.market_30d_pct != null ? " · market " + (R.market_30d_pct > 0 ? "up " + R.market_30d_pct + "%" :
-      R.market_30d_pct < 0 ? "down " + Math.abs(R.market_30d_pct) + "%" : "flat") + " over 30 days" : "");
+    " · " + (R.sets_tracked || 0) + " sets";
   const ageDays = Math.floor((Date.now() - new Date(R.date + "T23:59:00Z").getTime()) / 864e5);
   if (ageDays >= 2) $("stale").appendChild(el("div", "stale",
     "These prices are " + ageDays + " days old. The daily update has stopped; check the GitHub repo's Actions tab or open issues."));
@@ -196,7 +193,7 @@ function rowsFor(key) {
     (showNew || v === "Wait, too new" || r.label !== "Wait, too new") &&
     (!v || (r.label || "").indexOf(v) === 0) &&
     (!q || (r.name + " " + r.num + " #" + r.num + " " + r.set).toLowerCase().includes(q)));
-  const by = { auto: key === "stable" || key === "buy" ? (a, b) => b.price - a.price : (a, b) => b.pct - a.pct,
+  const by = { auto: key === "stable" ? (a, b) => b.price - a.price : (a, b) => b.pct - a.pct,
                setnum: (a, b) => a.set.localeCompare(b.set) || numKey(a.num) - numKey(b.num) || String(a.num).localeCompare(String(b.num)),
                pct: (a, b) => b.pct - a.pct, drop: (a, b) => b.drop - a.drop,
                cheap: (a, b) => a.price - b.price, dear: (a, b) => b.price - a.price }[sort];
@@ -204,7 +201,7 @@ function rowsFor(key) {
 }
 
 function changeText(r, key) {
-  if (key === "stable" || key === "buy") {   // versus the 90-day average, same +/-3% band the reasons use
+  if (key === "stable") {   // versus the 90-day average, same +/-3% band the reasons use
     const p = -r.pct;
     if (Math.abs(p) < 3) return ["at its 90-day avg", ""];
     return p < 0 ? [Math.abs(p).toFixed(1) + "% under 90-day avg", "down"] : [p.toFixed(1) + "% over 90-day avg", "up"];
@@ -226,16 +223,7 @@ function draw() {
   });
   const sec = SECTIONS.find((s) => s.key === active), rows = rowsFor(active), th = R.thresholds[active] || {};
   let sum, note;
-  if (active === "buy") {
-    sum = "Low for the card and no longer sliding. What this means ▾";
-    const mk = R.market_30d_pct;
-    note = "Cards whose price is in the cheapest quarter of their own price history (at least 60 days of it) and has held steady for two weeks, " +
-      "leaving out new releases and anything still falling or spiking. It means the price is low for this card right now, not that it cannot go lower. " +
-      "In the Sep–Oct 2026 backtest these cards were about half as likely as others to cost 5%+ more a month later, " +
-      "but on average they still fell with the market." +
-      (mk != null && mk < -1 ? " The whole market is down " + Math.abs(mk) + "% over 30 days, so prices may keep easing and waiting carries little risk." : "") +
-      " Every card is listed, for every set.";
-  } else if (active === "stable") {
+  if (active === "stable") {
     sum = "Prices that have barely moved for a month. What this means ▾";
     note = "Cards whose market price has been flat for about 30 days and is not in a new release. Waiting is unlikely to save much on these, " +
       "but in the Aug–Nov 2026 backtest they still drifted down about 2% a month on average while the whole market fell. " +
@@ -277,7 +265,7 @@ function draw() {
     if (r.label || (r.why && r.why.length)) {
       const w = el("div", "why");
       if (r.label) {
-        const cls = r.label === "Stable price" || r.label === "Reasonable time to buy" ? "stable" : r.label.indexOf("Wait") === 0 ? "wait" : "";
+        const cls = r.label === "Stable price" ? "stable" : r.label.indexOf("Wait") === 0 ? "wait" : "";
         w.appendChild(el("span", "verdict " + cls, r.label + (r.score != null ? " · stability " + r.score : "")));
       }
       w.appendChild(document.createTextNode((r.why || []).join(" · ") +

@@ -12,7 +12,6 @@ A daily report of Pokemon TCG card prices for completing master sets: which card
 
 ## What the dashboard shows
 
-- **Reasonable buys:** cards whose price is in the cheapest quarter of their own history (60+ days of it) and has held steady for two weeks, excluding new releases and anything still falling or spiking. The price is low for the card, but it can still go lower. In the Sep–Oct 2026 backtest these cards were about half as likely as others to cost 5%+ more a month later (8% vs 16%), but on average they still fell with the market. The dashboard header shows the market's 30-day direction for context.
 - **Stable:** cards whose price has barely moved for a month. Waiting is unlikely to save much on these, but they are not bargains: in the Aug–Nov 2026 backtest they still drifted down about 2% a month while the market fell.
 - **24 hours / 7 days / vs 30-day avg / New lows:** price drops. A drop usually means the price is still falling.
 - **Labels on every card:**

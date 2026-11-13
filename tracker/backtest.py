@@ -117,8 +117,7 @@ def main():
             first = first_seen[k]
             age = None if first == 0 else (i - first)
             months = (D - dt.date.fromisoformat(pub[name])).days / 30.44
-            full = [a[n] for n in range(max(0, i - 365), i) if not math.isnan(a[n])]
-            sc = score_card(m, series_at(a, i), months, set_id[name] in undated, age, supply.get(name), full)
+            sc = score_card(m, series_at(a, i), months, set_id[name] in undated, age, supply.get(name))
             if not sc:
                 continue
             window = [a[n] for n in range(i + 1, j + 1) if not math.isnan(a[n])]
@@ -163,10 +162,9 @@ def main():
     out["by_date"] = {}
     for i in tests:
         sub = [r for r in rows if r[4] == days[i]]
-        bu = [r for r in sub if r[0] == "Reasonable time to buy"]
+        st = [r for r in sub if r[0] == "Stable price"]
         out["by_date"][days[i]] = {"all": round(median([r[2] for r in sub]) * 100, 1),
-                                   "buy": round(median([r[2] for r in bu]) * 100, 1) if bu else None,
-                                   "buy_n": len(bu)}
+                                   "stable": round(median([r[2] for r in st]) * 100, 1) if st else None}
     (ROOT / "report").mkdir(exist_ok=True)
     (ROOT / "report" / "backtest.json").write_text(json.dumps(out, indent=1))
 
@@ -179,8 +177,8 @@ def main():
     for name, s in out["by_label"].items():
         print(fmt.format(name, s["cards"], s["median_change_pct"], s["cheaper5_pct"], s["dearer5_pct"],
                          s["best_wait_saving_pct"], s["vs_all_pct"], str(s["vs_all_90pct_interval"])))
-    print("by date (median change, all vs reasonable-buy, n):",
-          ", ".join(f"{d}: {v['all']}/{v['buy']} n={v['buy_n']}" for d, v in out["by_date"].items()))
+    print("by date (median change, all vs stable):",
+          ", ".join(f"{d}: {v['all']}/{v['stable']}" for d, v in out["by_date"].items()))
 
 
 if __name__ == "__main__":

@@ -11,21 +11,10 @@ What this can and cannot tell you (from tracker/backtest.py, Aug-Nov 2026):
   An independent review found an earlier "buy now" score did no better than
   this simple quietness measure, so the score is now exactly that.
 
-"Reasonable time to buy" (checked after the Wait labels, so never a card
-that is new, still falling or spiking): the price is in the cheapest quarter of
-the card's own history (60+ days of it) and has stopped sliding for two weeks.
-It says the price is low for this card and not currently dropping. It does not
-say the price cannot go lower; see tracker/backtest.py for how such cards did.
-
 It describes price history. It does not predict prices.
 """
 
 MIN_POINTS = 21          # days of price history needed before scoring
-# "Reasonable time to buy": set before testing, not tuned on outcomes
-BUY_MIN_HISTORY = 60     # days of the card's own prices needed
-BUY_MAX_PCTILE = 0.25    # today's price is in the cheapest quarter of the card's own history
-BUY_MAX_FALL_14 = -0.03  # not down more than 3% over the last two weeks (the slide has paused)
-BUY_MAX_FALL_7 = -0.02   # nor more than 2% this week
 NEW_CARD_DAYS = 45       # a printing first seen this recently counts as new
 
 
@@ -80,13 +69,12 @@ def supply_signal(items):
             "chg90": None if mlong is None else round(mlong * 100, 1), "products": len(c30)}
 
 
-def score_card(price, series, months, undated, card_age_days=None, supply=None, full_history=None):
+def score_card(price, series, months, undated, card_age_days=None, supply=None):
     """series: [(age_in_days, market_price)] for earlier days, any order.
     months: set age in months (None if unknown); undated: promo-style set
     whose release date says nothing about the card; card_age_days: days since
-    this printing was first seen (None if it predates the price history);
-    full_history: every earlier market price on file for this card, for the
-    "Reasonable time to buy" check. Returns None when there is not enough history."""
+    this printing was first seen (None if it predates the price history).
+    Returns None when there is not enough history."""
     hist = [(a, m) for a, m in series if 1 <= a <= 90]
     if len(hist) < MIN_POINTS:
         return None
@@ -109,24 +97,12 @@ def score_card(price, series, months, undated, card_age_days=None, supply=None, 
 
     new_set = not undated and months is not None and months < 3
     new_card = card_age_days is not None and card_age_days < NEW_CARD_DAYS
-    p14 = price_near(hist, 14)
-    chg14 = (price - p14) / p14 if p14 else chg7
-    allp = list(full_history) if full_history else prices
-    # mid-rank, so a price that never moves sits at the middle, not the bottom
-    below_n = sum(1 for x in allp if x < price)
-    equal_n = sum(1 for x in allp if x == price)
-    pctile = (below_n + 0.5 * equal_n) / len(allp)
-    dearer_share = sum(1 for x in allp if x > price) / len(allp)
-    reasonable = (len(allp) >= BUY_MIN_HISTORY and pctile <= BUY_MAX_PCTILE
-                  and chg14 > BUY_MAX_FALL_14 and chg7 > BUY_MAX_FALL_7)
     if new_set or new_card:
         label = "Wait, too new"
     elif chg7 <= -0.08 or (chg30 is not None and chg30 <= -0.10):
         label = "Wait, still falling"
     elif chg7 >= 0.08 or (chg30 is not None and chg30 >= 0.20):
         label = "Wait, price spiking"
-    elif reasonable:
-        label = "Reasonable time to buy"
     elif score >= 85:
         label = "Stable price"
     elif score >= 60:
@@ -135,10 +111,6 @@ def score_card(price, series, months, undated, card_age_days=None, supply=None, 
         label = "Volatile"
 
     why = []
-    if label == "Reasonable time to buy":
-        why.append(f"cheaper than on {round(dearer_share * 100)}% of its last {len(allp)} days")
-        why.append("held steady for 2 weeks" if abs(chg14) < 0.02 else
-                   f"{'up' if chg14 > 0 else 'down'} {abs(round(chg14 * 100))}% over 2 weeks")
     if new_card and not new_set:
         why.append(f"first priced {card_age_days} days ago")
     if below >= 0.03:
@@ -169,4 +141,4 @@ def score_card(price, series, months, undated, card_age_days=None, supply=None, 
 
     return {"score": score, "label": label, "why": why, "avg90": round(avg90, 2),
             "chg7": round(chg7 * 100, 1), "chg30": None if chg30 is None else round(chg30 * 100, 1),
-            "range30": round(rng30 * 100, 1), "pctile": round(pctile * 100), "hist_days": len(allp)}
+            "range30": round(rng30 * 100, 1)}

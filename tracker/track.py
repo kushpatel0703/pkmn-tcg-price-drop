@@ -436,9 +436,8 @@ CAVEATS = [
     "Market price is TCGplayer's recent-sales estimate for the printing, not split by condition; "
     "treat it as the Near Mint price.",
     "Cheapest listing is for any condition and excludes shipping; it is usually a played copy.",
-    "Labels describe price history, not a prediction. 'Reasonable time to buy' means the price is in the "
-    "cheapest quarter of the card's own history and has stopped sliding; it can still go lower. "
-    "In the Aug-Nov 2026 backtest every label was cheaper on average a month later in a falling market; "
+    "Labels describe price history, not a prediction. In the Aug-Nov 2026 backtest every label, "
+    "including Stable price, was cheaper on average a month later in a falling market; "
     "the Wait labels fell the most.",
 ]
 
@@ -460,7 +459,7 @@ def analyse(cfg, cards, set_of, days, groups, sealed_by_set=None):
             break
     week = read_snapshot(SNAP_DIR / f"{week_day}.csv.gz") if week_day else {}
 
-    sums, counts, lows, low_day, series, first_day, ndays, allp = {}, {}, {}, {}, {}, {}, {}, {}
+    sums, counts, lows, low_day, series, first_day, ndays = {}, {}, {}, {}, {}, {}, {}
     for d in days[:-1]:
         snap = read_snapshot(SNAP_DIR / f"{d}.csv.gz")
         age = (t - dt.date.fromisoformat(d)).days
@@ -469,8 +468,6 @@ def analyse(cfg, cards, set_of, days, groups, sealed_by_set=None):
                 continue
             first_day.setdefault(k, d)
             ndays[k] = ndays.get(k, 0) + 1
-            if age <= 365:
-                allp.setdefault(k, []).append(m)
             if age <= 93:
                 series.setdefault(k, []).append((age, m))
             if age <= 30:
@@ -504,7 +501,7 @@ def analyse(cfg, cards, set_of, days, groups, sealed_by_set=None):
         g = group_of.get(set_of[pid])
         months = (t - dt.date.fromisoformat(g["published"])).days / 30.44 if g else None
         sc = score_card(m, series.get(k, []), months, bool(g and g["id"] in undated_ids),
-                        card_age(k), supply.get(set_of[pid]), allp.get(k))
+                        card_age(k), supply.get(set_of[pid]))
         if sc:
             scores[k] = sc
 
@@ -534,7 +531,7 @@ def analyse(cfg, cards, set_of, days, groups, sealed_by_set=None):
     def passes(m, ref, rule):
         return ref > m and ref - m >= rule["min_drop_usd"] and (ref - m) / ref * 100 >= rule["min_drop_pct"]
 
-    sections = {"buy": [], "stable": [], "day": [], "week": [], "avg30": [], "record": []}
+    sections = {"stable": [], "day": [], "week": [], "avg30": [], "record": []}
     for k, (m, _) in cur.items():
         if str(k[0]) not in cards or m < cfg["min_price"]:
             continue
@@ -554,15 +551,13 @@ def analyse(cfg, cards, set_of, days, groups, sealed_by_set=None):
         labels[sc["label"]] = labels.get(sc["label"], 0) + 1
         if sc["label"] == "Stable price":
             sections["stable"].append(row(k, sc["avg90"]))
-        elif sc["label"] == "Reasonable time to buy":
-            sections["buy"].append(row(k, sc["avg90"], {"pctile": sc["pctile"]}))
 
     totals = {key: len(rows) for key, rows in sections.items()}
     cap = cfg.get("max_rows_per_set", 40)
     for key, rows in sections.items():
-        if key in ("stable", "buy"):
+        if key == "stable":
             rows.sort(key=lambda r: (-r["price"], r["set"]))
-            continue                      # shipped in full, for every set
+            continue                      # every stable card is shipped, for every set
         rows.sort(key=lambda r: (-r["pct"], -r["drop"]))
         per_set, kept = {}, []
         for r in rows:                    # cap per set so one set cannot crowd out the others
@@ -571,9 +566,6 @@ def analyse(cfg, cards, set_of, days, groups, sealed_by_set=None):
                 kept.append(r)
         rows[:] = kept
 
-    # whole-market direction: median 30-day change of cards over the minimum price
-    mkt = [sc["chg30"] for sc in scores.values() if sc["chg30"] is not None]
-    market_30d = round(median(mkt), 1) if mkt else None
     in_report = set(set_of.values())
     return {
         "date": today,
@@ -591,7 +583,6 @@ def analyse(cfg, cards, set_of, days, groups, sealed_by_set=None):
         "min_price": cfg["min_price"],
         "max_rows_per_set": cap,
         "scored": len(scores),
-        "market_30d_pct": market_30d,
         "labels": labels,
         "totals": totals,
         "caveats": CAVEATS,
