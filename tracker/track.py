@@ -19,6 +19,7 @@ from the archives, so failing is safe; saving bad data is not.
 Standard library only. Run:  python tracker/track.py
 Environment: SKIP_BACKFILL=1 skips archive downloads (used on push-triggered runs).
 """
+import bisect
 import csv
 import datetime as dt
 import gzip
@@ -37,9 +38,9 @@ from array import array
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from score import score_card, supply_signal, median  # noqa: E402
-import pricecheck  # noqa: E402
+import buywait  # noqa: E402
 import nearmint  # noqa: E402
+from buywait import _median as median  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 BASE = os.environ.get("TCGCSV_BASE", "https://tcgcsv.com").rstrip("/")
@@ -451,12 +452,10 @@ def check_today(rows, prev_snap, set_products, groups):
 # ---------------------------------------------------------------- analysis
 
 CAVEATS = [
-    "Market price is TCGplayer's recent-sales estimate for the printing, not split by condition; "
-    "treat it as the Near Mint price.",
-    "Cheapest listing is for any condition and excludes shipping; it is usually a played copy.",
-    "Labels describe price history, not a prediction. In the Aug-Nov 2026 backtest every label, "
-    "including Stable price, was cheaper on average a month later in a falling market; "
-    "the Wait labels fell the most.",
+    "Market price is TCGplayer's recent-sales estimate for each printing, not split by condition; "
+    "treat it as the Near Mint price (JustTCG's Near Mint prices match it closely).",
+    "Buy / Wait describes price history, not a forecast. It has only been tested on 2026 prices, "
+    "mostly a falling market; in a rising market waiting costs money and Wait would lag by a few weeks.",
 ]
 
 
@@ -479,210 +478,121 @@ def load_matrix(days, keep):
 def analyse(cfg, cards, set_of, days, groups, sealed_by_set=None):
     """days: sorted list of snapshot dates, last one is 'today'."""
     today = days[-1]
-    t = dt.date.fromisoformat(today)
     n = len(days)
-    ords = [dt.date.fromisoformat(d).toordinal() for d in days]
     cur = read_snapshot(SNAP_DIR / f"{today}.csv.gz")
-    sealed_ids = {pid for s in (sealed_by_set or {}).values() for pid in s}
-    keep = {k for k, (m, _) in cur.items()
-            if (str(k[0]) in cards and m >= cfg["min_price"]) or str(k[0]) in sealed_ids}
+    min_price = cfg["min_price"]
+    keep = {k for k, (m, _) in cur.items() if str(k[0]) in cards and m >= min_price}
     matrix = load_matrix(days, keep)
+    undated = set(cfg.get("undated_set_ids", []))
+    in_report = {g["name"] for g in groups if g["name"] in set(set_of.values())}
+    set_info = {g["name"]: {"published": g["published"], "undated": g["id"] in undated} for g in groups if g["name"] in in_report}
+    card_set = {k: set_of[str(k[0])] for k in keep}
+    eng = buywait.Engine(matrix, days, card_set, set_info)
+    ords, t = eng.ords, n - 1
+    y = n - 2 if n > 1 and ords[-1] - ords[-2] <= 3 else None
 
-    prev_i = n - 2 if n > 1 and ords[-1] - ords[-2] <= 3 else None
-    prev_day = days[prev_i] if prev_i is not None else None
-    week_i = next((i for i in range(n - 2, -1, -1) if 7 <= ords[-1] - ords[i] <= 10), None)
-    week_day = days[week_i] if week_i is not None else None
+    def group_of(name, price):
+        if "ball pattern" in name.lower():
+            return "pattern"
+        return "bulk" if price < min_price else "chase" if price >= cfg.get("chase_min", 20) else "mid"
 
-    sums, counts, lows, low_day, series, first_day, ndays, prev, week = {}, {}, {}, {}, {}, {}, {}, {}, {}
-    for k, a in matrix.items():
-        for i in range(n - 1):
-            m = a[i]
-            if math.isnan(m):
-                continue
-            age = ords[-1] - ords[i]
-            if k not in first_day:
-                first_day[k] = days[i]
-            ndays[k] = ndays.get(k, 0) + 1
-            if age <= 93:
-                series.setdefault(k, []).append((age, m))
-            if age <= 30:
-                sums[k] = sums.get(k, 0.0) + m
-                counts[k] = counts.get(k, 0) + 1
-            if k not in lows or m < lows[k]:
-                lows[k], low_day[k] = m, days[i]
-        if prev_i is not None and not math.isnan(a[prev_i]):
-            prev[k] = a[prev_i]
-        if week_i is not None and not math.isnan(a[week_i]):
-            week[k] = a[week_i]
-
-    th = cfg["thresholds"]
-    group_of = {g["name"]: g for g in groups}
-    undated_ids = set(cfg.get("undated_set_ids", []))
-    supply = {}
-    for name, sealed in (sealed_by_set or {}).items():
-        items = [(sealed[str(k[0])], m, series.get(k, [])) for k, (m, _) in cur.items() if str(k[0]) in sealed]
-        sig = supply_signal(items)
-        if sig:
-            supply[name] = sig
-
-    def card_age(k):
-        if k not in first_day:
-            return 0
-        if first_day[k] == days[0]:
-            return None                   # seen since the history starts: age unknown, not new
-        return (t - dt.date.fromisoformat(first_day[k])).days
-
-    card_keys = [k for k in matrix if str(k[0]) in cards]
-    scores = {}
-    for k in card_keys:
-        m = cur[k][0]
-        pid = str(k[0])
-        g = group_of.get(set_of[pid])
-        months = (t - dt.date.fromisoformat(g["published"])).days / 30.44 if g else None
-        sc = score_card(m, series.get(k, []), months, bool(g and g["id"] in undated_ids),
-                        card_age(k), supply.get(set_of[pid]))
-        if sc:
-            scores[k] = sc
-
-    def label_of(k):
-        sc = scores.get(k)
-        if sc:
-            return sc["label"], sc["score"], sc["why"]
-        g = group_of.get(set_of[str(k[0])])
-        age = card_age(k)
-        if (g and g["id"] not in undated_ids and (t - dt.date.fromisoformat(g["published"])).days < 91) \
-                or (age is not None and age < 45):
-            return "Wait, too new", None, ["new release; prices usually keep falling for a few months"]
-        return None, None, [f"only {ndays.get(k, 0) + 1} days of price history, too few to judge"]
-
-    def row(k, ref, extra=None):
+    rows = []
+    for k in keep:
+        d = eng.describe(k, t)
+        if not d:
+            continue
         pid, sub = k
-        m, low = cur[k]
         c = cards[str(pid)]
-        r = {"id": pid, "name": c["name"], "num": c["num"], "rarity": c["rarity"],
-             "set": set_of[str(pid)], "printing": sub, "price": round(m, 2),
-             "listing": low, "was": round(ref, 2), "drop": round(ref - m, 2),
-             "pct": round((ref - m) / ref * 100, 1), "hist_days": ndays.get(k, 0) + 1}
-        label, score, why = label_of(k)
-        if label:
-            r["label"] = label
-        if score is not None:
-            r["score"] = score
-        r["why"] = why
-        if extra:
-            r.update(extra)
-        return r
+        a = matrix[k]
+        lo_i = bisect.bisect_left(ords, ords[t] - 364)
+        win = [(ords[j], a[j]) for j in range(lo_i, t + 1) if not math.isnan(a[j])]
+        low = min(win, key=lambda x: x[1])
+        high = max(win, key=lambda x: x[1])
+        spark_from, pts = buywait.spark(a, ords, t)
+        c28 = eng.change(k, t, eng.j28)
+        rows.append({
+            "id": pid, "name": c["name"], "num": c["num"], "rarity": c["rarity"], "set": card_set[k],
+            "printing": sub, "price": round(a[t], 2), "state": d["state"], "reason": d["reason"], "in_state_days": d["days"],
+            "newly_buy": bool(d["state"] == "Buy" and y is not None and eng.state[k][y] == 2),
+            "group": group_of(c["name"], a[t]),
+            "chg4w": None if c28 is None else round(c28 * 100, 1),
+            "low": round(low[1], 2), "low_on": dt.date.fromordinal(low[0]).isoformat(),
+            "high": round(high[1], 2), "high_on": dt.date.fromordinal(high[0]).isoformat(),
+            "hist_days": len(win), "spark_from": spark_from, "spark": pts})
+    rows.sort(key=lambda r: (r["state"] != "Buy", -r["price"]))
+    state_of = {(r["id"], r["printing"]): r for r in rows}
 
-    def passes(m, ref, rule):
-        return ref > m and ref - m >= rule["min_drop_usd"] and (ref - m) / ref * 100 >= rule["min_drop_pct"]
-
-    sections = {"stable": [], "day": [], "week": [], "avg30": [], "record": []}
-    for k in card_keys:
-        m = cur[k][0]
-        if k in prev and passes(m, prev[k], th["day"]):
-            sections["day"].append(row(k, prev[k]))
-        if k in week and passes(m, week[k], th["week"]):
-            sections["week"].append(row(k, week[k]))
-        if counts.get(k, 0) >= th["avg30"]["min_days_of_history"]:
-            avg = sums[k] / counts[k]
-            if passes(m, avg, th["avg30"]):
-                sections["avg30"].append(row(k, avg))
-        if ndays.get(k, 0) >= th["record"]["min_days_of_history"] and k in lows and passes(m, lows[k], th["record"]):
-            sections["record"].append(row(k, lows[k], {"was_on": low_day[k], "since": first_day[k]}))
-
-    labels = {}
-    for k, sc in scores.items():
-        labels[sc["label"]] = labels.get(sc["label"], 0) + 1
-        if sc["label"] == "Stable price":
-            sections["stable"].append(row(k, sc["avg90"]))
-
-    totals = {key: len(rows) for key, rows in sections.items()}
-    cap = cfg.get("max_rows_per_set", 40)
-    for key, rows in sections.items():
-        if key == "stable":
-            rows.sort(key=lambda r: (-r["price"], r["set"]))
-            continue                      # every stable card is shipped, for every set
-        rows.sort(key=lambda r: (-r["pct"], -r["drop"]))
-        per_set, kept = {}, []
-        for r in rows:                    # cap per set so one set cannot crowd out the others
-            per_set[r["set"]] = per_set.get(r["set"], 0) + 1
-            if per_set[r["set"]] <= cap:
-                kept.append(r)
-        rows[:] = kept
-
-    # ---- price check: where today's price sits in each card's own last year
-    pc_cards, checks = [], {}
-    for k in card_keys:
-        c = pricecheck.check(matrix[k], ords, n - 1)
-        if not c:
+    # ---- sets: state, groups (bulk / mid / chase / ball patterns), booster box
+    price_of = {}
+    for (pid, _sub), (m, _) in cur.items():
+        price_of.setdefault(str(pid), m)
+    abbr = {}
+    try:
+        abbr = {s["name"]: s["abbr"] for s in json.loads((ROOT / "report" / "all_sets.json").read_text())}
+    except (OSError, ValueError, KeyError):
+        pass
+    sets = []
+    for g in groups:
+        name = g["name"]
+        if name not in in_report:
             continue
-        checks[k] = c
-        y = pricecheck.check(matrix[k], ords, n - 2) if prev_i is not None else None
-        pid, sub = k
-        cd = cards[str(pid)]
-        label, score, _ = label_of(k)
-        pc_cards.append({
-            "id": pid, "name": cd["name"], "num": cd["num"], "rarity": cd["rarity"], "set": set_of[str(pid)],
-            "printing": sub, "price": round(c["price"], 2), "listing": cur[k][1],
-            "low": round(c["low"], 2), "high": round(c["high"], 2), "typical": round(c["med"], 2),
-            "target": round(c["target"], 2), "days": c["days"], "at": c["at"], "flat": c["flat"],
-            "newly": bool(c["at"] and y and not y["at"]),
-            "above_low": round((c["price"] / c["low"] - 1) * 100, 1),
-            "label": label, "score": score, "spark": pricecheck.spark(matrix[k], ords, n - 1)})
-    pc_cards.sort(key=lambda r: (r["above_low"], -r["price"]))
-    card_matrix = {k: matrix[k] for k in card_keys}
-    card_score = pricecheck.scorecard(card_matrix, ords, days, cfg["min_price"],
-                                      ROOT / "data" / "pricecheck_scorecard.json",
-                                      cfg.get("pricecheck_rule_since", today))
+        st = eng.set_state(name, t) if any(cs == name for cs in card_set.values()) else {"new": False, "falling": False, "chg8w": None}
+        was = eng.set_state(name, y) if y is not None and st["chg8w"] is not None else None
+        grp = {x: {"n": 0, "total": 0.0, "buy_n": 0, "buy_total": 0.0, "wait_n": 0, "wait_total": 0.0}
+               for x in ("bulk", "mid", "chase", "pattern")}
+        grp["bulk"]["floor"] = 0.0
+        bulk_list, seen = [], set()
+        for (pid, sub), (m, _) in cur.items():
+            if set_of.get(str(pid)) != name:
+                continue
+            cd = cards[str(pid)]
+            gname = group_of(cd["name"], m)
+            gr = grp[gname]
+            gr["n"] += 1
+            gr["total"] += m
+            r = state_of.get((pid, sub))
+            if r:
+                key = "buy" if r["state"] == "Buy" else "wait"
+                gr[key + "_n"] += 1
+                gr[key + "_total"] += m
+            if gname == "bulk":
+                gr["floor"] += max(m, 0.40)       # TCGplayer Direct's per-card minimum
+                if pid not in seen:
+                    seen.add(pid)
+                    bulk_list.append([cd["name"], cd["num"]])
+        for gr in grp.values():
+            for x in list(gr):
+                if isinstance(gr[x], float):
+                    gr[x] = round(gr[x], 2)
+        box = buywait.booster_box((sealed_by_set or {}).get(name, {}), price_of)
+        sets.append({"name": name, "published": g["published"], "era": "Promos & specials" if g["id"] in undated else g["era"],
+                     "abbr": abbr.get(name, ""), **st,
+                     "changed": None if not was else ("stopped falling" if was["falling"] and not st["falling"]
+                                                      else "started falling" if st["falling"] and not was["falling"] else None),
+                     "groups": grp, "box": box, "bulk_list": bulk_list})
 
-    # ---- whole-set view: cost of every printing now vs at each card's good price
-    setview = {}
-    for k, (m, _) in cur.items():
-        pid = str(k[0])
-        if pid not in cards:
-            continue
-        sv = setview.setdefault(set_of[pid], {"printings": 0, "market_total": 0.0, "target_total": 0.0,
-                                               "checked": 0, "at": 0, "above": 0})
-        sv["printings"] += 1
-        sv["market_total"] += m
-        c = checks.get(k)
-        if c:
-            sv["checked"] += 1
-            sv["at" if c["at"] else "above"] += 1
-            sv["target_total"] += min(m, c["target"])
-        else:
-            sv["target_total"] += m
-    for sv in setview.values():
-        sv["market_total"] = round(sv["market_total"], 2)
-        sv["target_total"] = round(sv["target_total"], 2)
-
-    in_report = set(set_of.values())
+    # ---- evidence and market direction
+    ev = eng.evidence(ROOT / "data" / "buywait_evidence.json", cfg.get("buywait_rule_since", today))
+    j = eng.j28[t]
+    s0 = sum(matrix[k][j] for k in keep if j >= 0 and not math.isnan(matrix[k][j]) and not math.isnan(matrix[k][t]))
+    s1 = sum(matrix[k][t] for k in keep if j >= 0 and not math.isnan(matrix[k][j]) and not math.isnan(matrix[k][t]))
+    buy = [r for r in rows if r["state"] == "Buy"]
     return {
         "date": today,
         "generated_at": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%MZ"),
-        "compared": {"day": prev_day, "week": week_day},
         "history_from": days[0],
-        "days_of_history": len(days),
-        "cards_priced": sum(1 for k in cur if str(k[0]) in cards),
-        "cards_over_min": len(card_keys),
-        "sets_tracked": len(in_report),
-        "sets": [{"name": g["name"], "published": g["published"], "era": g["era"],
-                  **({"supply": supply[g["name"]]} if g["name"] in supply else {}),
-                  **({"view": setview[g["name"]]} if g["name"] in setview else {})}
-                 for g in groups if g["name"] in in_report],
-        "thresholds": th,
-        "min_price": cfg["min_price"],
-        "max_rows_per_set": cap,
-        "scored": len(scores),
-        "labels": labels,
-        "totals": totals,
+        "days_of_history": n,
+        "sets_tracked": len(sets),
+        "min_price": min_price,
+        "chase_min": cfg.get("chase_min", 20),
+        "market_30d_pct": round((s1 / s0 - 1) * 100, 1) if s0 else None,
+        "rule": buywait.RULE,
+        "counts": {"cards": len(rows), "buy": len(buy), "wait": len(rows) - len(buy),
+                   "buy_total": round(sum(r["price"] for r in buy), 2), "newly_buy": sum(r["newly_buy"] for r in rows)},
+        "evidence": ev,
         "caveats": CAVEATS,
-        "pricecheck": {"rule": {"window_days": pricecheck.WINDOW_DAYS, "target_pctile": int(pricecheck.TARGET_PCTILE * 100),
-                                "min_days": pricecheck.MIN_DAYS, "spark_step_days": pricecheck.SPARK_STEP},
-                       "checked": len(pc_cards), "at_target": sum(r["at"] for r in pc_cards),
-                       "newly_at_target": sum(r["newly"] for r in pc_cards),
-                       "scorecard": card_score, "cards": pc_cards},
-        "sections": sections,
+        "sets": sets,
+        "cards": rows,
     }
 
 
@@ -776,15 +686,13 @@ def main():
     history(cfg, groups, today, set_cards)
 
     report = analyse(cfg, cards, set_of, snapshot_days(), groups, sealed_by_set)
-    pc = report["pricecheck"]
     nm_path = ROOT / "data" / "nearmint.json"
-    nearmint.refresh(nm_path, pc["cards"], report["date"], nm_key)
-    pc["nm_cards"] = nearmint.annotate(nm_path, pc["cards"], report["date"])
-    pc["nm_at_target"] = sum(1 for c in pc["cards"] if c.get("nm_at"))
+    nearmint.refresh(nm_path, report["cards"], report["date"], nm_key)
+    report["nm_cards"] = nearmint.annotate(nm_path, report["cards"], report["date"])
     write_outputs(report)
-    s, lab = report["sections"], report["labels"]
-    print(f"{report['cards_priced']} prices | stable {len(s['stable'])} | 24h {len(s['day'])} | 7d {len(s['week'])} | "
-          f"30d avg {len(s['avg30'])} | record lows {len(s['record'])} | labels {lab}")
+    c, ev = report["counts"], report["evidence"]["all"]
+    print(f"{c['cards']} cards | buy {c['buy']} (${c['buy_total']:.0f}) | wait {c['wait']} | newly buy {c['newly_buy']} | "
+          f"evidence dates {ev.get('dates')} | market 30d {report['market_30d_pct']}%")
 
 
 if __name__ == "__main__":

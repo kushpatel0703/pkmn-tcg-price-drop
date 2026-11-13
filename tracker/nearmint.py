@@ -1,13 +1,13 @@
 """Near Mint prices from JustTCG (justtcg.com), kept in data/nearmint.json.
 
 The free plan allows about 1,000 requests a month (100 a day) at 20 cards per
-request, so each daily run refreshes a slice: cards never checked first, then
-cards at a good price older than 2 days, then the rest older than 7 days.
-About 600 cards a day, so every card is refreshed roughly weekly.
+request, so each daily run refreshes a slice of the cards worth $5 or more:
+never-checked cards first, then the oldest. About 600 cards a day.
 
-For each card printing it stores the Near Mint price and JustTCG's Near Mint
-low, high and 30-day average over the last year. Needs the JUSTTCG_API_KEY
-secret; without it nothing happens.
+JustTCG's Near Mint price matches TCGplayer's market price closely (median
+difference 0.2%), so the useful part is its Near Mint low and high over the
+past year: they reach further back than our own history while that is still
+loading. Needs the JUSTTCG_API_KEY secret; without it nothing happens.
 """
 import datetime as dt
 import json
@@ -20,8 +20,7 @@ API = "https://api.justtcg.com/v1/cards"
 BATCH = 20                 # free-plan batch size
 REQUESTS_PER_RUN = 30      # ~900 a month, under the free plan's 1,000
 KEEP_SPARE = 60            # stop when the plan has this few requests left this month
-STALE_AT = 2               # days before a card at a good price is checked again
-STALE_OTHER = 7
+MIN_PRICE = 5.0            # below this, a year's range changes no buying decision
 
 
 def _post(key, items):
@@ -39,8 +38,8 @@ def load(path):
         return {}
 
 
-def refresh(path, pc_cards, today, key):
-    """pc_cards: the price-check rows (id, printing, price, at). Updates path in place."""
+def refresh(path, rows, today, key):
+    """rows: the report's card rows (id, printing, price). Updates path in place."""
     key = (key or "").strip()
     if not key or os.environ.get("SKIP_BACKFILL"):
         return
@@ -49,17 +48,11 @@ def refresh(path, pc_cards, today, key):
 
     def age(k):
         e = store.get(k)
-        return None if not e else (t - dt.date.fromisoformat(e["checked"])).days
+        return 10**6 if not e else (t - dt.date.fromisoformat(e["checked"])).days
 
-    due = []
-    for c in pc_cards:
-        k = f"{c['id']}|{c['printing']}"
-        a = age(k)
-        if a is None or a >= (STALE_AT if c["at"] else STALE_OTHER):
-            due.append((a is not None, not c["at"], -c["price"], c["id"]))
-    due.sort()
+    due = sorted(((-age(f"{c['id']}|{c['printing']}"), -c["price"], c["id"]) for c in rows if c["price"] >= MIN_PRICE))
     ids = []
-    for _, _, _, pid in due:                 # one request covers every printing of a card
+    for _, _, pid in due:                    # one request covers every printing of a card
         if str(pid) not in ids:
             ids.append(str(pid))
     ids = ids[:BATCH * REQUESTS_PER_RUN]
@@ -100,19 +93,16 @@ def refresh(path, pc_cards, today, key):
     print(f"near mint: {done} printings refreshed with {used} requests; {len(store)} on file")
 
 
-def annotate(path, pc_cards, today):
-    """Add Near Mint fields to each price-check row that has them. Returns how many."""
+def annotate(path, rows, today):
+    """Add JustTCG's Near Mint 1-year low and high to each card row that has them. Returns how many."""
     store = load(path)
     t = dt.date.fromisoformat(today)
     n = 0
-    for c in pc_cards:
+    for c in rows:
         e = store.get(f"{c['id']}|{c['printing']}")
-        if not e or e.get("nm") is None:
+        if not e or not isinstance(e.get("low1y"), (int, float)) or not isinstance(e.get("high1y"), (int, float)):
             continue
-        c["nm"] = e["nm"]
+        c["nm_low1y"], c["nm_high1y"] = round(e["low1y"], 2), round(e["high1y"], 2)
         c["nm_age"] = (t - dt.date.fromisoformat(e["checked"])).days
-        if isinstance(e.get("low1y"), (int, float)) and isinstance(e.get("high1y"), (int, float)):
-            c["nm_low1y"], c["nm_high1y"] = round(e["low1y"], 2), round(e["high1y"], 2)
-        c["nm_at"] = e["nm"] <= c["target"]
         n += 1
     return n
