@@ -9,7 +9,8 @@ on:
     paths: ["tracker/**", "config.json", ".github/workflows/daily.yml"]
 
 permissions:
-  contents: write
+  contents: write   # commit the day's data
+  issues: write     # open an issue when a run fails
 
 concurrency:
   group: daily-price-drops
@@ -21,19 +22,50 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-      - name: Make sure 7z is available (history backfill)
+          ref: main                    # latest main, not the commit that queued this run
+          persist-credentials: false   # keep the write token out of .git while untrusted data is unpacked
+      - name: Make sure 7z is available (history from archives)
         run: which 7z || (sudo apt-get update && sudo apt-get install -y p7zip-full)
       - name: Fetch prices and build report
-        run: python tracker/track.py
+        id: track
+        env:
+          # code pushes only rebuild today's report; history downloads happen on the daily run
+          SKIP_BACKFILL: ${{ github.event_name == 'push' && '1' || '' }}
+        run: python3 tracker/track.py
       - name: Save results
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           git config user.name "price-drop-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data report dashboard
           git diff --cached --quiet && echo "nothing new" && exit 0
-          git commit -m "Prices for $(date -u +%F)"
-          git pull --rebase --autostash
-          git push
+          day=$(python3 -c "import json;print(json.load(open('report/latest.json'))['date'])" 2>/dev/null || date -u +%F)
+          git commit -m "Prices for $day"
+          remote="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          for i in 1 2 3; do
+            git pull --rebase "$remote" main && git push "$remote" HEAD:main && exit 0
+            git rebase --abort 2>/dev/null || true
+            sleep 10
+          done
+          echo "could not push results" && exit 1
+      - name: Open an issue when the run fails
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title="Daily price run is failing"
+          body="Run ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} (${{ github.event_name }}) failed. Open it and read the 'Fetch prices and build report' step for the reason."
+          n=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "\"$title\" in:title" --json number -q '.[0].number')
+          if [ -n "$n" ]; then gh issue comment "$n" --repo "$GITHUB_REPOSITORY" --body "$body"
+          else gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "$body"; fi
+      - name: Close the issue once a run succeeds
+        if: success() && github.event_name != 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for n in $(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "\"Daily price run is failing\" in:title" --json number -q '.[].number'); do
+            gh issue close "$n" --repo "$GITHUB_REPOSITORY" --comment "Fixed: run ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} succeeded."
+          done

@@ -1,23 +1,45 @@
 # Pokemon TCG price drops
 
-A daily report of Pokemon TCG cards whose TCGplayer market price has dropped the most, for completing master sets as cheaply as possible.
+A daily report of Pokemon TCG card prices for completing master sets: which cards dropped, which are still falling (wait), and which have settled.
 
 ## How it works
 
 - Every day at 21:40 UTC, GitHub Actions runs `tracker/track.py`.
-- It pulls prices from [tcgcsv.com](https://tcgcsv.com) (a free daily mirror of TCGplayer) for every English set released since February 2020 (Sword & Shield onward), one row per printing (Normal, Holofoil, Reverse Holofoil).
-- Each day's prices are saved to `data/snapshots/`. The first run loads the previous 90 days from tcgcsv's archive.
-- It writes `report/latest.json` and `dashboard/index.html` with four sections:
-  - **24 hours**: biggest drops since the previous day
-  - **7 days**: biggest drops over a week
-  - **vs 30-day avg**: cards furthest below their 30-day average
-  - **New lows**: cards below their lowest price since tracking began
+- It pulls prices from [tcgcsv.com](https://tcgcsv.com), a free community mirror of TCGplayer, for every English set from Sword & Shield on. Each printing (Normal, Holofoil, Reverse Holofoil) is tracked separately.
+- Today's prices are checked against the last good day. If a set fails, the feed looks partial, or prices look implausible, the run fails and saves nothing for that day. A GitHub issue is opened, and the day is filled in later from tcgcsv's archives.
+- On the daily run only, up to `archives_per_run` days of missing history are loaded from tcgcsv's archives, gently. Pushing code does not download archives.
+- It writes `report/latest.json` and `dashboard/index.html`.
+
+## What the dashboard shows
+
+- **Stable:** cards whose price has barely moved for a month. Waiting is unlikely to save much on these, but they are not bargains: in the Aug–Nov 2026 backtest they still drifted down about 2% a month while the market fell.
+- **24 hours / 7 days / vs 30-day avg / New lows:** price drops. A drop usually means the price is still falling.
+- **Labels on every card:**
+  - Wait, too new
+  - Wait, still falling
+  - Wait, price spiking
+  - Stable price
+  - Some movement
+  - Volatile
+
+  The Wait labels are the most reliable part: those cards fell the most afterwards.
+- **Stability score (0–100):** how flat the price has been over 30 days. It describes history; it is not a prediction.
+
+## Limits
+
+- The market price is one number per printing, not per condition. Treat it as the Near Mint price.
+- The cheapest listing is for any condition, before shipping, and is usually a played copy.
+
+## Checking the labels
+
+`python tracker/backtest.py 30` scores past dates using only what was known then. It reports what prices did next, per label, including the best saving from waiting. Each label's gap to all cards comes with a 90% interval from resampling whole sets. By default it uses only dates outside the window the score was tuned on (Sep 8 – Nov 12, 2026); `--all` includes them.
 
 ## Tuning
 
 Edit `config.json`:
 
-- `min_price`: ignore cards cheaper than this
-- `thresholds`: minimum dollar and percent drop for each section
-- `only_set_names_containing` / `exclude_set_names_containing`: narrow the sets tracked, e.g. `["Evolving Skies", "151"]`
-- `sets_published_on_or_after`: earliest set release date to track
+- `min_price`: ignore cards cheaper than this.
+- `thresholds`: minimum dollar and percent drop, and the card's own days of history, for each drop section.
+- `max_rows_per_set`: cap per set in each drop section. Stable cards are never capped.
+- `backfill_days`, `archives_per_run`: how far back history goes, and how much loads per daily run.
+- `only_set_names_containing` / `exclude_set_names_containing`: narrow the sets tracked.

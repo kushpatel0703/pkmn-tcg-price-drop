@@ -17,16 +17,14 @@
     "avg30": {
       "min_drop_usd": 1.0,
       "min_drop_pct": 15,
-      "min_days_of_history": 10
+      "min_days_of_history": 20
     },
     "record": {
-      "min_drop_usd": 0.25,
-      "min_drop_pct": 2,
-      "min_days_of_history": 30
+      "min_drop_usd": 0.5,
+      "min_drop_pct": 3,
+      "min_days_of_history": 60
     }
   },
-  "max_rows_per_section": 200,
-  "buyable_within_pct": 3,
   "min_set_id": 2585,
   "include_set_ids": [
     2545
@@ -37,15 +35,14 @@
   "set_dates": {
     "2776": "2021-02-01"
   },
-  "late_added_set_ids": [
-    2545
-  ],
-  "_notes": "min_set_id drops old sets the source lists without a real release date (POP Series, Nintendo Promos, EX Trainer Kits...). include_set_ids: 2545 = SWSH Sword & Shield Promo Cards (dated Nov 2019). exclude_set_ids: 2374 = Miscellaneous Cards & Products. set_dates fixes release dates the source lacks (2776 = First Partner Pack). late_added_set_ids get their history loaded after the fact. undated_set_ids are promo groups that span years (SWSH/SV/ME promos, Prize Pack Series, Southeast Asia Exclusives), so set age is ignored in their buy score. backfill_days 365: older history loads about 25 days per daily run, so the buy score can be backtested across more than one market phase.",
+  "_notes": "min_set_id drops old sets the source lists without a real release date (POP Series, Nintendo Promos, EX Trainer Kits...). include_set_ids: 2545 = SWSH Sword & Shield Promo Cards (dated Nov 2019). exclude_set_ids: 2374 = Miscellaneous Cards & Products. set_dates fixes release dates the source lacks (2776 = First Partner Pack). undated_set_ids are promo groups that span years (SWSH/SV/ME promos, Prize Pack Series, Southeast Asia Exclusives), so set age is ignored for them and a card's own first-seen date is used instead. backfill_days: how far back history is loaded from tcgcsv's archives, archives_per_run at a time on the daily run only. max_rows_per_set caps each drop section per set; stable-price cards are never capped. Record lows need 60 days of the card's own history.",
   "undated_set_ids": [
     2545,
     22872,
     24451,
     22880,
     24864
-  ]
+  ],
+  "max_rows_per_set": 40,
+  "archives_per_run": 10
 }

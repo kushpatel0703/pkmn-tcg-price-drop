@@ -1,110 +1,117 @@
 {
  "look_ahead_days": 30,
+ "out_of_sample_only": false,
+ "tuned_window": [
+  "2026-09-08",
+  "2026-11-12"
+ ],
  "dates_tested": [
   "2026-10-13",
   "2026-10-06",
   "2026-09-29",
-  "2026-09-22",
-  "2026-09-15",
-  "2026-09-08"
+  "2026-09-22"
  ],
  "history": [
-  "2026-08-13",
+  "2026-07-19",
   "2026-11-12"
  ],
  "all": {
-  "cards": 24389,
-  "median_change_pct": -4.3,
-  "mean_change_pct": -4.3,
-  "cheaper_later_pct": 47,
-  "dearer_later_pct": 16
+  "cards": 16460,
+  "median_change_pct": -4.1,
+  "cheaper5_pct": 47,
+  "dearer5_pct": 17,
+  "best_wait_saving_pct": 8.0
  },
  "by_label": {
-  "Buy now": {
-   "cards": 4415,
-   "median_change_pct": -2.4,
-   "mean_change_pct": -2.5,
-   "cheaper_later_pct": 33,
-   "dearer_later_pct": 11
+  "Some movement": {
+   "cards": 3855,
+   "median_change_pct": -3.7,
+   "cheaper5_pct": 45,
+   "dearer5_pct": 17,
+   "best_wait_saving_pct": 7.1,
+   "vs_all_pct": 0.4,
+   "vs_all_90pct_interval": [
+    -0.1,
+    1.0
+   ]
   },
-  "Buy soon, supply tightening": {
-   "cards": 44,
-   "median_change_pct": -4.4,
-   "mean_change_pct": -4.0,
-   "cheaper_later_pct": 43,
-   "dearer_later_pct": 16
+  "Stable price": {
+   "cards": 4080,
+   "median_change_pct": -2.2,
+   "cheaper5_pct": 34,
+   "dearer5_pct": 12,
+   "best_wait_saving_pct": 3.9,
+   "vs_all_pct": 1.9,
+   "vs_all_90pct_interval": [
+    1.2,
+    2.7
+   ]
   },
-  "Good price": {
-   "cards": 7893,
-   "median_change_pct": -3.2,
-   "mean_change_pct": -3.2,
-   "cheaper_later_pct": 42,
-   "dearer_later_pct": 16
-  },
-  "No rush": {
-   "cards": 4705,
-   "median_change_pct": -6.4,
-   "mean_change_pct": -5.2,
-   "cheaper_later_pct": 54,
-   "dearer_later_pct": 18
+  "Volatile": {
+   "cards": 2950,
+   "median_change_pct": -5.5,
+   "cheaper5_pct": 52,
+   "dearer5_pct": 19,
+   "best_wait_saving_pct": 10.6,
+   "vs_all_pct": -1.4,
+   "vs_all_90pct_interval": [
+    -2.1,
+    -0.5
+   ]
   },
   "Wait, price spiking": {
-   "cards": 1910,
-   "median_change_pct": -9.0,
-   "mean_change_pct": -6.8,
-   "cheaper_later_pct": 61,
-   "dearer_later_pct": 19
+   "cards": 1163,
+   "median_change_pct": -8.5,
+   "cheaper5_pct": 59,
+   "dearer5_pct": 21,
+   "best_wait_saving_pct": 14.8,
+   "vs_all_pct": -4.4,
+   "vs_all_90pct_interval": [
+    -7.0,
+    -1.0
+   ]
   },
   "Wait, still falling": {
-   "cards": 5097,
-   "median_change_pct": -5.7,
-   "mean_change_pct": -4.9,
-   "cheaper_later_pct": 53,
-   "dearer_later_pct": 20
+   "cards": 4142,
+   "median_change_pct": -5.4,
+   "cheaper5_pct": 51,
+   "dearer5_pct": 21,
+   "best_wait_saving_pct": 10.8,
+   "vs_all_pct": -1.3,
+   "vs_all_90pct_interval": [
+    -2.7,
+    0.3
+   ]
   },
   "Wait, too new": {
-   "cards": 325,
-   "median_change_pct": -20.2,
-   "mean_change_pct": -21.1,
-   "cheaper_later_pct": 87,
-   "dearer_later_pct": 4
+   "cards": 270,
+   "median_change_pct": -17.6,
+   "cheaper5_pct": 82,
+   "dearer5_pct": 5,
+   "best_wait_saving_pct": 23.5,
+   "vs_all_pct": -13.5,
+   "vs_all_90pct_interval": [
+    -31.8,
+    -6.8
+   ]
   }
  },
- "by_score": {
-  "0-60": {
-   "cards": 10053,
-   "median_change_pct": -7.3,
-   "mean_change_pct": -6.2,
-   "cheaper_later_pct": 57,
-   "dearer_later_pct": 19
+ "by_date": {
+  "2026-10-13": {
+   "all": -3.6,
+   "stable": -1.4
   },
-  "60-70": {
-   "cards": 3411,
-   "median_change_pct": -4.3,
-   "mean_change_pct": -3.7,
-   "cheaper_later_pct": 48,
-   "dearer_later_pct": 18
+  "2026-10-06": {
+   "all": -3.8,
+   "stable": -2.2
   },
-  "70-80": {
-   "cards": 4221,
-   "median_change_pct": -3.0,
-   "mean_change_pct": -3.0,
-   "cheaper_later_pct": 42,
-   "dearer_later_pct": 17
+  "2026-09-29": {
+   "all": -4.2,
+   "stable": -2.7
   },
-  "80-90": {
-   "cards": 4677,
-   "median_change_pct": -2.4,
-   "mean_change_pct": -2.7,
-   "cheaper_later_pct": 35,
-   "dearer_later_pct": 13
-  },
-  "90-100": {
-   "cards": 2027,
-   "median_change_pct": -2.8,
-   "mean_change_pct": -2.9,
-   "cheaper_later_pct": 35,
-   "dearer_later_pct": 10
+  "2026-09-22": {
+   "all": -4.7,
+   "stable": -2.8
   }
  }
 }
