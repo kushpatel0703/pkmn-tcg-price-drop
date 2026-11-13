@@ -35,6 +35,10 @@ A daily report of Pokemon TCG card prices for completing master sets: which card
 
 `.github/workflows/history.yml` loads tcgcsv's archives back to their start (Feb 2024), about one every 30 seconds, 60 per run, three runs a day. Each day is downloaded once. Once the history is complete its runs finish in seconds, and the workflow can be disabled.
 
+## Near Mint prices
+
+With a free JustTCG API key saved as the repository secret `JUSTTCG_API_KEY`, each daily run refreshes Near Mint prices for about 600 cards (30 requests, under the free plan's monthly allowance). See `tracker/nearmint.py`. Each card gets its Near Mint price and JustTCG's Near Mint low and high over the past year. Cards at a good price are refreshed every 2 days, the rest weekly. Stored in `data/nearmint.json`.
+
 ## Limits
 
 - The market price is one number per printing, not per condition. Treat it as the Near Mint price.

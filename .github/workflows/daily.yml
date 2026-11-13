@@ -32,6 +32,7 @@ jobs:
         env:
           # code pushes only rebuild today's report; history downloads happen on the daily run
           SKIP_BACKFILL: ${{ github.event_name == 'push' && '1' || '' }}
+          JUSTTCG_API_KEY: ${{ secrets.JUSTTCG_API_KEY }}   # Near Mint prices; optional
         run: python3 tracker/track.py
       - name: Save results
         if: always()

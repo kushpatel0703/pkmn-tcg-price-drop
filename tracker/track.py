@@ -39,6 +39,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from score import score_card, supply_signal, median  # noqa: E402
 import pricecheck  # noqa: E402
+import nearmint  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 BASE = os.environ.get("TCGCSV_BASE", "https://tcgcsv.com").rstrip("/")
@@ -709,6 +710,8 @@ def history_only():
 
 
 def main():
+    # read the Near Mint API key once and keep it out of the environment of later steps
+    nm_key = os.environ.pop("JUSTTCG_API_KEY", "")
     if "--history-only" in sys.argv:
         return history_only()
     cfg = json.loads((ROOT / "config.json").read_text())
@@ -762,6 +765,11 @@ def main():
     history(cfg, groups, today, set_cards)
 
     report = analyse(cfg, cards, set_of, snapshot_days(), groups, sealed_by_set)
+    pc = report["pricecheck"]
+    nm_path = ROOT / "data" / "nearmint.json"
+    nearmint.refresh(nm_path, pc["cards"], report["date"], nm_key)
+    pc["nm_cards"] = nearmint.annotate(nm_path, pc["cards"], report["date"])
+    pc["nm_at_target"] = sum(1 for c in pc["cards"] if c.get("nm_at"))
     write_outputs(report)
     s, lab = report["sections"], report["labels"]
     print(f"{report['cards_priced']} prices | stable {len(s['stable'])} | 24h {len(s['day'])} | 7d {len(s['week'])} | "

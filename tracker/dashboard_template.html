@@ -155,6 +155,8 @@ function init() {
   $("sort").addEventListener("input", () => { sortChoice[view] = $("sort").value; shown = 50; draw(); });
   const f = $("foot");
   (R.caveats || []).forEach((c) => f.appendChild(el("p", null, c)));
+  if (R.pricecheck.nm_cards) f.appendChild(el("p", null, "Near Mint prices and their 1-year range come from JustTCG and are refreshed about weekly (every 2 days for cards at a good price); " +
+    R.pricecheck.nm_cards.toLocaleString() + " cards have one so far."));
   f.appendChild(el("p", null, "Market prices from TCGplayer via tcgcsv.com, updated once a day. Cards under " +
     money(R.min_price || 1) + " are left out of the price check. All cards are raw (ungraded)."));
   draw();
@@ -306,7 +308,9 @@ function checkItem(r) {
   m.appendChild(document.createTextNode([r.set, r.num ? "#" + r.num : ""].filter(Boolean).join(" · "))); left.appendChild(m);
   head.appendChild(left);
   const p = el("div", "price"); p.appendChild(el("div", "now", money(r.price)));
-  p.appendChild(el("div", "small", "good ≤ " + money(r.target))); head.appendChild(p);
+  p.appendChild(el("div", "small", "good ≤ " + money(r.target)));
+  if (r.nm != null) p.appendChild(el("div", "small", "NM " + money(r.nm)));
+  head.appendChild(p);
   // range bar: low ... high, good-price zone, today
   const span = Math.max(r.high - r.low, 0.01), pos = (x) => Math.min(100, Math.max(0, (x - r.low) / span * 100));
   const bar = el("div", "bar"); bar.appendChild(el("div", "trk"));
@@ -340,6 +344,12 @@ function detail(r) {
   d.appendChild(el("p", null, "Low " + money(r.low) + " · typical " + money(r.typical) + " · high " + money(r.high) + " over " + r.days + " days of prices."));
   if (!r.flat) d.appendChild(el("p", null, "Good price: " + money(r.target) + " or less. Today " + money(r.price) +
     (r.at ? " is at a good price." : r.price <= r.target ? " matches it, but the card has sat at this price for much of the period." : " is " + Math.max(1, Math.round((r.price / r.target - 1) * 100)) + "% above it.")));
+  if (r.nm != null) {
+    d.appendChild(el("p", null, "Near Mint: " + money(r.nm) + (r.nm_at ? ", at or under the good price" : ", " + Math.max(1, Math.round((r.nm / r.target - 1) * 100)) + "% above the good price") +
+      " (from JustTCG, checked " + (r.nm_age === 0 ? "today" : r.nm_age === 1 ? "yesterday" : r.nm_age + " days ago") + ")."));
+    if (r.nm_low1y != null) d.appendChild(el("p", null, "Near Mint over the past year: low " + money(r.nm_low1y) + ", high " + money(r.nm_high1y) +
+      (r.nm > r.nm_low1y ? " · today " + Math.round((r.nm / r.nm_low1y - 1) * 100) + "% above that low." : " · today is at that low.")));
+  }
   if (r.label) d.appendChild(el("p", null, "Label: " + r.label + (r.score != null ? " (stability " + r.score + ")" : "") + "." +
       (r.label === "Wait, still falling" ? " It is near its low because it is still dropping; it may go lower." : "")));
   if (r.flat) d.appendChild(el("p", null, "The price has barely moved all year, which usually means few sales; treat it with care."));
