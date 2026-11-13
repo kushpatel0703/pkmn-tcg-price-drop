@@ -11,6 +11,11 @@ Each card worth $1 or more gets one state per day, from data up to that day only
     Just jumped    the card is up 8%+ in a week or 20%+ in 4 weeks
   Buy: none of those applied on any of the last 7 days.
 
+  While the whole market is rising (median card up 2%+ over 8 weeks), only
+  "Still dropping" holds a card back: in rising markets waiting cost money.
+  Chosen on 2024-2025 checks and confirmed on 2026 (saved 1.6% vs 0.8% of spend
+  against buying everything at once).
+
 Why set-led: in the backtests (Jun-Nov 2026) a card's position in its own price
 range did not predict whether waiting would pay (cards at their lows kept
 falling), while a falling or new set did: its cards were a median ~9% cheaper
@@ -34,9 +39,11 @@ DROP_7, DROP_28 = -0.08, -0.10
 JUMP_7, JUMP_28 = 0.08, 0.20
 SETTLE_DAYS = 7
 OUTLOOK = 60
-RULE = "v1: new<182d, listed<45d, set8w<=-3% (recover -1%), drop 7d-8%/28d-10%, jump 7d+8%/28d+20%, settle 7d"
+RULE = ("v2: new<182d, listed<45d, set8w<=-3% (recover -1%), drop 7d-8%/28d-10%, jump 7d+8%/28d+20%, settle 7d; "
+        "market8w>=+2%: only dropping")
 
 NONE, NEW_SET, NEW_CARD, SET_FALLING, DROPPING, JUMPED = 0, 1, 2, 3, 4, 5
+MARKET_RULE = {"rise": 0.02, "skip": {NEW_SET, NEW_CARD, SET_FALLING, JUMPED}}
 NAN = float("nan")
 SEALED_KEEP = ("booster box",)
 SEALED_SKIP = ("case", "display", "half", "pokemon center", "code card", "lot of", "bundle", "mini")
@@ -60,12 +67,15 @@ def _median(xs):
 class Engine:
     """Computes daily states for every card from the price matrix."""
 
-    def __init__(self, matrix, days, card_set, set_info):
+    def __init__(self, matrix, days, card_set, set_info, market_rule=None):
         """matrix: {key: array of market prices per day}; card_set: {key: set name};
         set_info: {set name: {"published": iso date, "undated": bool}}."""
         self.days, self.n = days, len(days)
         self.ords = [dt.date.fromisoformat(d).toordinal() for d in days]
         self.m, self.card_set, self.set_info = matrix, card_set, set_info
+        # market_rule: None, or {"rise": 0.02, "skip": {SET_FALLING, ...}}: while the whole market's
+        # median 8-week change is at or above "rise", the listed Wait reasons are not applied
+        self.market_rule = market_rule
         self.j7 = _back_index(self.ords, 7, 3)
         self.j28 = _back_index(self.ords, 28, 7)
         self.j56 = _back_index(self.ords, 56, 7)
@@ -83,6 +93,7 @@ class Engine:
         for k, a in matrix.items():
             self.first[k] = next((i for i in range(self.n) if not math.isnan(a[i])), None)
         self._set_trend()
+        self._market_trend()
         self._states()
 
     def _set_trend(self):
@@ -107,24 +118,42 @@ class Engine:
                 fall[i] = prev
             self.chg8[s], self.falling[s] = chg, fall
 
+    def _market_trend(self):
+        """Median 8-week change across all cards $1+ on each day."""
+        arrs = list(self.m.values())
+        self.mkt8 = [None] * self.n
+        for i in range(self.n):
+            j = self.j56[i]
+            if j < 0:
+                continue
+            r = [a[i] / a[j] - 1 for a in arrs
+                 if not math.isnan(a[i]) and a[i] >= MIN_PRICE and not math.isnan(a[j]) and a[j] > 0]
+            if len(r) >= 50:
+                self.mkt8[i] = _median(r)
+
+    def rising(self, i):
+        mr = self.market_rule
+        return bool(mr) and self.mkt8[i] is not None and self.mkt8[i] >= mr["rise"]
+
     def reason_at(self, k, i):
         a, s = self.m[k], self.card_set[k]
         p = a[i]
         if math.isnan(p) or p < MIN_PRICE:
             return None
+        skip = self.market_rule["skip"] if self.rising(i) else ()
         info = self.set_info.get(s, {})
-        if not info.get("undated") and self.ords[i] - self.rel[s] < NEW_SET_DAYS:
+        if NEW_SET not in skip and not info.get("undated") and self.ords[i] - self.rel[s] < NEW_SET_DAYS:
             return NEW_SET
         f = self.first[k]
-        if f is not None and f > 0 and self.ords[i] - self.ords[f] < NEW_CARD_DAYS:
+        if NEW_CARD not in skip and f is not None and f > 0 and self.ords[i] - self.ords[f] < NEW_CARD_DAYS:
             return NEW_CARD
-        if self.falling[s][i]:
+        if SET_FALLING not in skip and self.falling[s][i]:
             return SET_FALLING
         c7 = self.change(k, i, self.j7)
         c28 = self.change(k, i, self.j28)
-        if (c7 is not None and c7 <= DROP_7) or (c28 is not None and c28 <= DROP_28):
+        if DROPPING not in skip and ((c7 is not None and c7 <= DROP_7) or (c28 is not None and c28 <= DROP_28)):
             return DROPPING
-        if (c7 is not None and c7 >= JUMP_7) or (c28 is not None and c28 >= JUMP_28):
+        if JUMPED not in skip and ((c7 is not None and c7 >= JUMP_7) or (c28 is not None and c28 >= JUMP_28)):
             return JUMPED
         return NONE
 
@@ -254,10 +283,20 @@ class Engine:
             n0 = sum(cache[d][st][1] for d in dates for st in ("buy", "wait"))
             n60 = sum(cache[d][st][2] for d in dates for st in ("buy", "wait"))
             out["market_change_pct"] = round((n60 / n0 - 1) * 100, 1) if n0 else None
+            out["saved_pct"] = round((now - paid) / now * 100, 1) if now else None
             return out
 
         dates = sorted(cache)
-        return {"rule": RULE, "outlook_days": OUTLOOK, "all": summary(dates),
+        periods = []
+        for y in sorted({d[:4] for d in dates}):
+            for half, lo, hi in (("Jan–Jun", "01", "07"), ("Jul–Dec", "07", "13")):
+                ds = [d for d in dates if d[:4] == y and lo <= d[5:7] < hi]
+                if len(ds) >= 4:
+                    sm = summary(ds)
+                    periods.append({"label": f"{half} {y}", "dates": len(ds), "market_pct": sm["market_change_pct"],
+                                    "buy_pct": sm["buy"]["change_pct"], "wait_pct": sm["wait"]["change_pct"],
+                                    "saved_pct": round(sm["overpay_buy_now_pct"] - sm["overpay_following_pct"], 1)})
+        return {"rule": RULE, "outlook_days": OUTLOOK, "all": summary(dates), "periods": periods,
                 "live": summary([d for d in dates if d >= rule_since]), "rule_since": rule_since}
 
 

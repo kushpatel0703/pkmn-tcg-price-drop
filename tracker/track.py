@@ -487,7 +487,8 @@ def analyse(cfg, cards, set_of, days, groups, sealed_by_set=None):
     in_report = {g["name"] for g in groups if g["name"] in set(set_of.values())}
     set_info = {g["name"]: {"published": g["published"], "undated": g["id"] in undated} for g in groups if g["name"] in in_report}
     card_set = {k: set_of[str(k[0])] for k in keep}
-    eng = buywait.Engine(matrix, days, card_set, set_info)
+    eng = buywait.Engine(matrix, days, card_set, set_info,
+                         market_rule=buywait.MARKET_RULE if cfg.get("market_aware", True) else None)
     ords, t = eng.ords, n - 1
     y = n - 2 if n > 1 and ords[-1] - ords[-2] <= 3 else None
 
@@ -586,6 +587,8 @@ def analyse(cfg, cards, set_of, days, groups, sealed_by_set=None):
         "min_price": min_price,
         "chase_min": cfg.get("chase_min", 20),
         "market_30d_pct": round((s1 / s0 - 1) * 100, 1) if s0 else None,
+        "market_8w_pct": None if eng.mkt8[t] is None else round(eng.mkt8[t] * 100, 1),
+        "market_rising": eng.rising(t),
         "rule": buywait.RULE,
         "counts": {"cards": len(rows), "buy": len(buy), "wait": len(rows) - len(buy),
                    "buy_total": round(sum(r["price"] for r in buy), 2), "newly_buy": sum(r["newly_buy"] for r in rows)},

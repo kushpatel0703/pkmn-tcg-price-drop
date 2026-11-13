@@ -15,7 +15,7 @@
   "set_dates": {
     "2776": "2021-02-01"
   },
-  "_notes": "min_set_id drops old sets the source lists without a real release date (POP Series, Nintendo Promos, EX Trainer Kits...). include_set_ids: 2545 = SWSH Sword & Shield Promo Cards (dated Nov 2019). exclude_set_ids: 2374 = Miscellaneous Cards & Products. set_dates fixes release dates the source lacks (2776 = First Partner Pack). undated_set_ids are promo groups that span years (SWSH/SV/ME promos, Prize Pack Series, Southeast Asia Exclusives): no new-set rule, a card's own first-priced date is used. history_start/backfill_days/archives_per_run: price history from tcgcsv's archives. chase_min: cards at or above this price are the chase group; under min_price is bulk. buywait_rule_since: Buy/Wait rule fixed on this date; evidence after it is live.",
+  "_notes": "min_set_id drops old sets the source lists without a real release date (POP Series, Nintendo Promos, EX Trainer Kits...). include_set_ids: 2545 = SWSH Sword & Shield Promo Cards (dated Nov 2019). exclude_set_ids: 2374 = Miscellaneous Cards & Products. set_dates fixes release dates the source lacks (2776 = First Partner Pack). undated_set_ids are promo groups that span years (SWSH/SV/ME promos, Prize Pack Series, Southeast Asia Exclusives): no new-set rule, a card's own first-priced date is used. history_start/backfill_days/archives_per_run: price history from tcgcsv's archives. chase_min: cards at or above this price are the chase group; under min_price is bulk. buywait_rule_since: Buy/Wait rule fixed on this date; evidence after it is live. market_aware: while the median card is up 2%+ over 8 weeks, only still-dropping cards are held back.",
   "undated_set_ids": [
     2545,
     22872,
@@ -26,5 +26,6 @@
   "archives_per_run": 10,
   "history_start": "2024-02-08",
   "chase_min": 20,
-  "buywait_rule_since": "2026-11-13"
+  "buywait_rule_since": "2026-11-13",
+  "market_aware": true
 }

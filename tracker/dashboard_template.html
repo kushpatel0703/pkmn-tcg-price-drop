@@ -52,6 +52,10 @@
   .badge.buy { background: var(--buy); color: var(--card); }
   .badge.wait { background: var(--wait-soft); color: var(--wait); }
   .badge.steady { background: var(--buy-soft); color: var(--buy); }
+  table.periods { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; margin: 8px 0 4px; }
+  table.periods th, table.periods td { padding: 4px 3px; border-bottom: 1px solid var(--line); text-align: right; }
+  table.periods th:first-child, table.periods td:first-child { text-align: left; }
+  .market { font-size: 13.5px; margin-bottom: 8px; }
   .name { font-weight: 600; overflow-wrap: anywhere; }
   .meta { color: var(--muted); font-size: 13px; }
   .price { text-align: right; white-space: nowrap; font-weight: 650; font-variant-numeric: tabular-nums; font-size: 16px; }
@@ -77,9 +81,10 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>Pokemon TCG: buy or wait</h1>
+  <h1>Pokemon TCG: buy first or wait</h1>
   <div class="sub" id="sub"></div>
   <div id="stale"></div>
+  <div class="market" id="market"></div>
   <details class="evidence" id="evidence"><summary id="evsum"></summary><div id="evmore"></div></details>
   <div class="tabs" role="tablist">
     <button class="tab" type="button" role="tab" id="tab-sets">Sets<small id="tabsets-n"></small></button>
@@ -122,11 +127,14 @@ function fill(sel, opts, val) { sel.textContent = ""; opts.forEach(([v, t]) => {
 function init() {
   if (!R || !R.cards) { $("list").appendChild(el("div", "empty", "No report yet. The first daily run has not finished.")); return; }
   const mk = R.market_30d_pct;
-  $("sub").textContent = "Prices for " + fmtDate(R.date, true) + (mk != null ? " · whole market " + pctS(mk) + " in 30 days" : "") + " · " + R.sets_tracked + " sets";
+  $("sub").textContent = "Prices for " + fmtDate(R.date, true) + " · " + R.sets_tracked + " sets";
+  if (R.market_8w_pct != null) $("market").textContent = R.market_rising
+    ? "Market rising (" + pctS(R.market_8w_pct) + " over 8 weeks): waiting has cost money in rising markets, so only cards still dropping are held back."
+    : "Market " + (R.market_8w_pct < 0 ? "falling" : "flat") + " (" + pctS(R.market_8w_pct) + " over 8 weeks" + (mk != null ? ", " + pctS(mk) + " in 30 days" : "") + "): all wait signals apply.";
   const age = Math.floor((Date.now() - new Date(R.date + "T23:59:00Z").getTime()) / 864e5);
   if (age >= 2) $("stale").appendChild(el("div", "stale", "These prices are " + age + " days old: the daily update has stopped. Check the GitHub repo's Actions tab or open issues."));
   evidence();
-  fill($("statef"), [["", "Buy and Wait"], ["Buy", "Buy only"], ["Wait", "Wait only"]], store.get("statef", ""));
+  fill($("statef"), [["", "Buy first and can wait"], ["Buy", "Buy first only"], ["Wait", "Can wait only"]], store.get("statef", ""));
   fill($("groupf"), [["", "All cards $1+"], ["chase", "Chase ($" + (R.chase_min || 20) + "+)"], ["mid", "Mid ($1–" + (R.chase_min || 20) + ")"], ["pattern", "Ball patterns"]], store.get("groupf", ""));
   ["statef", "groupf"].forEach((id) => $(id).addEventListener("input", () => { store.set(id, $(id).value); shown = 50; draw(); }));
   $("q").addEventListener("input", () => { shown = 50; draw(); });
@@ -141,18 +149,27 @@ function init() {
 }
 
 function evidence() {
-  const ev = (R.evidence || {}).all || {};
-  if (!ev.dates) { $("evsum").textContent = "Track record: still building while older price history loads."; return; }
+  const E = R.evidence || {}, ev = E.all || {}, per = E.periods || [];
+  if (!ev.dates) { $("evsum").textContent = "Track record: still building."; return; }
   const b = ev.buy || {}, w = ev.wait || {};
-  $("evsum").textContent = "Track record: cards marked Wait were " + Math.abs(Math.round(w.change_pct)) + "% " + (w.change_pct < 0 ? "cheaper" : "dearer") +
-    " two months later; Buy cards " + Math.abs(Math.round(b.change_pct)) + "% " + (b.change_pct < 0 ? "cheaper" : "dearer") + ". ▾";
+  const ahead = per.filter((p) => p.buy_pct > p.wait_pct).length;
+  $("evsum").textContent = "Track record since " + fmtDate(ev.from, true) + ": Buy-first cards rose more than can-wait cards " +
+    (per.length && ahead === per.length ? "in every period" : "in " + ahead + " of " + per.length + " periods") +
+    "; following the labels saved about " + ev.saved_pct + "% vs buying everything at once. ▾";
   const m = $("evmore");
-  m.appendChild(el("p", null, "Buying on Buy (or after 60 days if a card never turned Buy) paid " + ev.overpay_following_pct + "% over each card's lowest price in those 60 days; buying straight away paid " + ev.overpay_buy_now_pct + "%."));
-  m.appendChild(el("p", null, "Based on " + ev.dates + " weekly checks from " + fmtDate(ev.from, true) + " to " + fmtDate(ev.to, true) + ", while the whole market moved " + pctS(ev.market_change_pct) +
-    " over each two months. Buy cards still got 5%+ cheaper " + b.cheaper5_pct + "% of the time and 5%+ dearer " + b.dearer5_pct + "%. Buy means waiting has saved little, not that the price can't dip."));
-  const live = (R.evidence || {}).live || {};
-  m.appendChild(el("p", null, live.dates ? "Since the rule was fixed (" + fmtDate(R.evidence.rule_since, true) + "): Wait " + pctS(live.wait.change_pct) + ", Buy " + pctS(live.buy.change_pct) + " over " + live.dates + " checks."
-    : "Live results (checks after the rule was fixed on " + fmtDate(R.evidence.rule_since, true) + ") appear 60 days after that. Results update as older history loads."));
+  if (per.length) {
+    const t = el("table", "periods"), hr = el("tr");
+    ["Two months after…", "Market", "Buy first", "Can wait", "Saved"].forEach((h) => hr.appendChild(el("th", null, h))); t.appendChild(hr);
+    per.forEach((p) => { const tr = el("tr"); [p.label, pctS(p.market_pct), pctS(p.buy_pct), pctS(p.wait_pct), (p.saved_pct > 0 ? "+" : "") + p.saved_pct + "%"].forEach((v) => tr.appendChild(el("td", null, v))); t.appendChild(tr); });
+    m.appendChild(t);
+  }
+  m.appendChild(el("p", null, "Read it as priority: buy the Buy-first cards now, because they have kept rising; can-wait cards rose less or fell. " +
+    "Can wait doesn't promise a lower price: when the market rose, they rose too, just less. 'Saved' is what following the labels would have saved against buying every card on the day (dollar-weighted), " +
+    "buying each can-wait card when it turned Buy or after 60 days."));
+  m.appendChild(el("p", null, ev.dates + " weekly checks, " + fmtDate(ev.from, true) + " – " + fmtDate(ev.to, true) + ". The market-aware part of the rule was chosen on 2024–25 and confirmed on 2026."));
+  const live = E.live || {};
+  m.appendChild(el("p", null, live.dates ? "Since the rule was fixed (" + fmtDate(E.rule_since, true) + "): Buy first " + pctS(live.buy.change_pct) + ", can wait " + pctS(live.wait.change_pct) + " over " + live.dates + " checks."
+    : "Live results (checks after the rule was fixed on " + fmtDate(E.rule_since, true) + ") appear 60 days after that."));
 }
 
 // ---- my sets (saved on this device when the browser allows it)
@@ -226,7 +243,7 @@ function draw() {
   const cr = cardRows(), sr = setRows();
   $("tabsets-n").textContent = sr.length + " sets";
   const buyN = cr.filter((r) => r.state === "Buy").length;
-  $("tabcards-n").textContent = buyN.toLocaleString() + " Buy · " + (cr.length - buyN).toLocaleString() + " Wait";
+  $("tabcards-n").textContent = buyN.toLocaleString() + " buy first · " + (cr.length - buyN).toLocaleString() + " can wait";
   const fc = $("focus"); fc.textContent = "";
   if (focusSet && view === "cards") {
     const chip = el("div", "focus"); chip.appendChild(el("span", null, "Showing " + focusSet));
@@ -239,12 +256,13 @@ function draw() {
 
 function drawSets(rows, list) {
   const nBuy = rows.reduce((t, s) => t + ["mid", "chase", "pattern"].reduce((u, g) => u + s.groups[g].buy_n, 0), 0);
-  $("summary").textContent = nBuy.toLocaleString() + " cards across these sets are Buy today. Bulk (under $1) is always fine to buy in one order.";
+  $("summary").textContent = nBuy.toLocaleString() + " cards across these sets are buy-first today. Bulk (under $1) is fine to buy any time, in one order.";
   if (!rows.length) { list.appendChild(el("div", "empty", "No sets selected.")); return; }
   rows.forEach((s) => list.appendChild(setItem(s)));
 }
 
 function setBadge(s) {
+  if (R.market_rising && (s.new || s.falling)) return ["steady", (s.new ? "New set" : "Falling " + pctS(s.chg8w) + " / 8 wks") + ", not held back while the market rises"];
   if (s.new) return ["wait", "New set"];
   if (s.falling) return ["wait", "Falling " + pctS(s.chg8w) + " / 8 wks"];
   if (s.chg8w == null) return ["steady", "Too few cards to judge"];
@@ -254,13 +272,13 @@ function setBadge(s) {
 function setItem(s) {
   const g = s.groups, item = el("div", "item"), head = el("div", "head"); head.setAttribute("role", "button"); head.tabIndex = 0;
   const [cls, txt] = setBadge(s);
-  head.appendChild(el("span", "badge " + cls, cls === "wait" ? "WAIT" : "OK"));
+  head.appendChild(el("span", "badge " + cls, cls === "wait" ? "CAN WAIT" : "OK"));
   const mid = el("div"); mid.appendChild(el("div", "name", s.name)); mid.appendChild(el("div", "meta", (s.published || "").slice(0, 4) + " · " + txt + (s.changed ? " · " + s.changed + " today" : "")));
   head.appendChild(mid);
   const buyN = g.mid.buy_n + g.chase.buy_n + g.pattern.buy_n, buyT = g.mid.buy_total + g.chase.buy_total + g.pattern.buy_total;
   const waitN = g.mid.wait_n + g.chase.wait_n + g.pattern.wait_n, waitT = g.mid.wait_total + g.chase.wait_total + g.pattern.wait_total;
   head.appendChild(el("div", "price", money0(buyT + waitT + g.bulk.total)));
-  head.appendChild(el("div", "reason " + (buyN ? "buy" : "wait"), "Buy now: " + buyN + " cards · " + money0(buyT) + "   ·   Wait: " + waitN + " · " + money0(waitT)));
+  head.appendChild(el("div", "reason " + (buyN ? "buy" : "wait"), "Buy first: " + buyN + " cards · " + money0(buyT) + "   ·   Can wait: " + waitN + " · " + money0(waitT)));
   if (g.bulk.n) head.appendChild(el("div", "reason muted", "Bulk: " + g.bulk.n + " printings under $1 · about " + money0(g.bulk.total) + (g.bulk.floor - g.bulk.total >= 1 ? "–" + money0(g.bulk.floor) : "") + " · buy any time, in one order"));
   const toggle = () => { open = open === "set:" + s.name ? null : "set:" + s.name; draw(); };
   head.addEventListener("click", toggle); head.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
@@ -271,12 +289,13 @@ function setItem(s) {
 
 function setDetail(s) {
   const d = el("div", "detail"), g = s.groups;
-  const why = s.new ? "This set came out " + fmtDate(s.published, true) + ". New sets usually keep falling for months; its cards turn Buy once it is 6 months old and steady."
-    : s.falling ? "The typical card in this set is " + pctS(s.chg8w) + " over 8 weeks. Cards turn Buy once that recovers above −1% and nothing else flags for a week."
-    : "The set is steady. Cards still marked Wait are dropping or jumping on their own.";
+  const why = (R.market_rising && (s.new || s.falling)) ? "The whole market is rising, and in rising markets waiting has cost money, so this set's cards are only held back if they are still dropping."
+    : s.new ? "This set came out " + fmtDate(s.published, true) + ". New sets usually keep falling for months; its cards turn buy-first once it is 6 months old and steady."
+    : s.falling ? "The typical card in this set is " + pctS(s.chg8w) + " over 8 weeks. Cards turn buy-first once that recovers above −1% and nothing else flags for a week."
+    : "The set is steady. Cards marked can-wait are dropping or jumping on their own.";
   d.appendChild(el("p", null, why));
   const t = el("table", "groups"), hr = el("tr");
-  ["Group", "Cards", "Buy now", "Wait"].forEach((h, i) => hr.appendChild(el("th", i ? "num" : null, h))); t.appendChild(hr);
+  ["Group", "Cards", "Buy first", "Can wait"].forEach((h, i) => hr.appendChild(el("th", i ? "num" : null, h))); t.appendChild(hr);
   ["chase", "mid", "pattern"].forEach((k) => {
     if (!g[k].n) return;
     const tr = el("tr");
@@ -332,8 +351,8 @@ function copyButton(label, text, host) {
 
 function drawCards(rows, list) {
   const buy = rows.filter((r) => r.state === "Buy"), newly = rows.filter((r) => r.newly_buy).length;
-  $("summary").textContent = buy.length.toLocaleString() + " Buy (" + money0(buy.reduce((t, r) => t + r.price, 0)) + ") · " + (rows.length - buy.length).toLocaleString() + " Wait" +
-    (newly ? " · " + newly + " turned Buy today" : "") + ". Cards under $1 are in each set's bulk list.";
+  $("summary").textContent = buy.length.toLocaleString() + " buy first (" + money0(buy.reduce((t, r) => t + r.price, 0)) + ") · " + (rows.length - buy.length).toLocaleString() + " can wait" +
+    (newly ? " · " + newly + " turned buy-first today" : "") + ". Cards under $1 are in each set's bulk list.";
   if (!rows.length) { list.appendChild(el("div", "empty", focusSet ? "No cards worth $1+ in this set yet." : "Nothing here with these filters.")); return; }
   rows.slice(0, shown).forEach((r) => list.appendChild(cardItem(r)));
   if (rows.length > shown) { const b = el("button", "more", "Show more (" + (rows.length - shown) + " left)"); b.type = "button";
@@ -343,7 +362,7 @@ function drawCards(rows, list) {
 function cardItem(r) {
   const item = el("div", "item"), head = el("div", "head"); head.setAttribute("role", "button"); head.tabIndex = 0;
   const buy = r.state === "Buy";
-  head.appendChild(el("span", "badge " + (buy ? "buy" : "wait"), buy ? "BUY" : "WAIT"));
+  head.appendChild(el("span", "badge " + (buy ? "buy" : "wait"), buy ? "BUY FIRST" : "CAN WAIT"));
   const mid = el("div"); mid.appendChild(el("div", "name", r.name));
   mid.appendChild(el("div", "meta", [r.set, r.num ? "#" + r.num : "", r.printing].filter(Boolean).join(" · "))); head.appendChild(mid);
   head.appendChild(el("div", "price", money(r.price)));
@@ -359,8 +378,11 @@ function cardItem(r) {
 
 function cardDetail(r, flat) {
   const d = el("div", "detail"), buy = r.state === "Buy";
-  d.appendChild(el("p", null, buy ? "Buy: nothing has flagged this card for " + r.reason.replace("steady ", "") + ". On cards like this, waiting has saved little."
-    : "Wait: " + r.reason + ". " + untilText(r)));
+  const ev = (R.evidence || {}).all || {};
+  const hist = ev.dates ? (buy ? " Since " + fmtDate(ev.from, true) + ", cards labelled buy-first rose " + pctS(ev.buy.change_pct) + " on average over the next two months."
+                               : " Since " + fmtDate(ev.from, true) + ", can-wait cards moved " + pctS(ev.wait.change_pct) + " on average over the next two months, against " + pctS(ev.buy.change_pct) + " for buy-first cards.") : "";
+  d.appendChild(el("p", null, buy ? "Buy first: nothing has flagged this card for " + r.reason.replace("steady ", "") + "." + hist
+    : "Can wait: " + r.reason + ". " + untilText(r) + hist));
   d.appendChild(chart(r));
   const span = r.hist_days >= 330 ? "Past year" : "Since " + fmtDate(r.spark_from || R.history_from, true);
   d.appendChild(el("p", null, span + ": low " + money(r.low) + " (" + fmtDate(r.low_on) + ") · high " + money(r.high) + " (" + fmtDate(r.high_on) + ")" +
@@ -380,11 +402,12 @@ function cardDetail(r, flat) {
 }
 
 function untilText(r) {
-  if (r.reason.indexOf("New set") === 0) return "It turns Buy once the set is 6 months old and steady.";
-  if (r.reason.indexOf("Set falling") === 0) return "It turns Buy once the set's 8-week change recovers above −1% and nothing else flags for a week.";
-  if (r.reason.indexOf("Just listed") === 0) return "It turns Buy 45 days after it was first priced, if steady.";
-  if (r.reason.indexOf("Settling") === 0) return "It turns Buy after 7 days without a warning.";
-  return "It turns Buy once the price holds for a week.";
+  if (R.market_rising && r.reason.indexOf("Still dropping") !== 0) return "It turns buy-first after a week without a warning.";
+  if (r.reason.indexOf("New set") === 0) return "It turns buy-first once the set is 6 months old and steady, or sooner if the whole market starts rising.";
+  if (r.reason.indexOf("Set falling") === 0) return "It turns buy-first once the set's 8-week change recovers above −1% (or the whole market starts rising) and nothing else flags for a week.";
+  if (r.reason.indexOf("Just listed") === 0) return "It turns buy-first 45 days after it was first priced, if steady.";
+  if (r.reason.indexOf("Settling") === 0) return "It turns buy-first after 7 days without a warning.";
+  return "It turns buy-first once the price holds for a week.";
 }
 
 function chart(r) {
