@@ -8,12 +8,12 @@
   :root {
     --bg: #f6f5f1; --card: #ffffff; --ink: #1c1f24; --muted: #5f6877; --line: #d9d6cc;
     --accent: #1f6f4a; --accent-soft: #e2f1e8; --chip: #eeece5; --warn: #8a5a00; --warn-soft: #f6ead0;
-    --bad: #a3271f; --bad-soft: #fbe3e0;
+    --bad: #a3271f; --bad-soft: #fbe3e0; --track: #e6e3da;
   }
   @media (prefers-color-scheme: dark) {
     :root { --bg: #14171b; --card: #1d2127; --ink: #eceef1; --muted: #a2abb8; --line: #3a414b;
             --accent: #5fd39a; --accent-soft: #1d3a2c; --chip: #272c33;
-            --warn: #f0c26a; --warn-soft: #3a3020; --bad: #ff9a8f; --bad-soft: #3d2220; }
+            --warn: #f0c26a; --warn-soft: #3a3020; --bad: #ff9a8f; --bad-soft: #3d2220; --track: #2c323a; }
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--ink);
@@ -21,19 +21,19 @@
   .wrap { max-width: 860px; margin: 0 auto; padding: 16px 12px 60px; }
   h1 { font-size: 20px; margin: 0 0 2px; letter-spacing: -0.01em; }
   .sub { color: var(--muted); font-size: 13px; margin-bottom: 10px; }
-  .stale { background: var(--bad-soft); color: var(--bad); border-radius: 10px; padding: 10px 12px;
-           font-weight: 600; margin-bottom: 10px; }
-  .tabs { display: flex; gap: 5px; margin-bottom: 10px; overflow-x: auto; scrollbar-width: none; }
-  .tab { flex: 1 0 auto; min-width: 66px; min-height: 48px; background: var(--card); border: 1px solid var(--line);
-         border-radius: 10px; padding: 6px 8px; text-align: center; cursor: pointer; color: var(--ink); font: inherit; }
-  .tab b { display: block; font-size: 17px; font-variant-numeric: tabular-nums; }
-  .tab span { font-size: 11.5px; color: var(--muted); line-height: 1.2; display: block; white-space: nowrap; }
+  .stale { background: var(--bad-soft); color: var(--bad); border-radius: 10px; padding: 10px 12px; font-weight: 600; margin-bottom: 10px; }
+  .tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-bottom: 10px; }
+  .tab { min-height: 48px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 6px 4px;
+         text-align: center; cursor: pointer; color: var(--ink); font: inherit; }
+  .tab b { display: block; font-size: 16px; font-variant-numeric: tabular-nums; }
+  .tab span { font-size: 12px; color: var(--muted); line-height: 1.2; display: block; }
   .tab[aria-selected="true"] { border-color: var(--accent); background: var(--accent-soft); }
   .tab[aria-selected="true"] span { color: var(--ink); }
   .filters { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px; }
   .filters input[type="search"], .filters select { width: 100%; min-height: 44px; padding: 8px 10px; border-radius: 9px;
          border: 1px solid var(--line); background: var(--card); color: var(--ink); font: inherit; font-size: 16px; min-width: 0; }
-  .filters input[type="search"], details#setbox, .toggle { grid-column: 1 / -1; }
+  .full { grid-column: 1 / -1; }
+  .hide { display: none !important; }
   details#setbox { background: var(--card); border: 1px solid var(--line); border-radius: 9px; }
   details#setbox summary { padding: 11px 10px; cursor: pointer; font-size: 15px; }
   .setactions { display: flex; gap: 6px; padding: 0 10px 8px; }
@@ -44,101 +44,124 @@
   .setrow { display: flex; align-items: center; gap: 10px; min-height: 44px; font-size: 15px; }
   .setrow input { width: 22px; height: 22px; flex: none; accent-color: var(--accent); }
   .setrow span { flex: 1; overflow-wrap: anywhere; }
-  .setrow small { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 12.5px; }
+  .setrow small { color: var(--muted); white-space: nowrap; font-size: 12.5px; }
   .toggle { display: flex; align-items: center; gap: 10px; min-height: 40px; font-size: 14.5px; }
   .toggle input { width: 22px; height: 22px; accent-color: var(--accent); }
+  .evidence { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin: 4px 0 10px; font-size: 13.5px; }
+  .evidence > div + div { margin-top: 4px; }
   details.note { color: var(--muted); font-size: 13px; margin: 2px 2px 10px; }
   details.note summary { cursor: pointer; padding: 6px 0; }
-  .row { display: grid; grid-template-columns: 1fr auto; gap: 3px 12px; background: var(--card);
-         border: 1px solid var(--line); border-radius: 12px; padding: 11px 13px; margin-bottom: 7px;
-         text-decoration: none; color: inherit; }
+  .item { background: var(--card); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 7px; }
+  .item.good { border-color: var(--accent); }
+  .head { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 11px 13px; cursor: pointer; }
   .name { font-weight: 600; overflow-wrap: anywhere; }
-  .meta { color: var(--muted); font-size: 13px; grid-column: 1; }
-  .chip { display: inline-block; background: var(--chip); border-radius: 6px; padding: 0 6px; font-size: 12px;
-          margin-right: 4px; color: var(--ink); }
-  .price { text-align: right; grid-row: 1 / span 2; grid-column: 2; align-self: start; white-space: nowrap; }
+  .meta { color: var(--muted); font-size: 13px; }
+  .chip { display: inline-block; background: var(--chip); border-radius: 6px; padding: 0 6px; font-size: 12px; margin-right: 4px; color: var(--ink); }
+  .price { text-align: right; white-space: nowrap; }
   .now { font-size: 17px; font-weight: 650; font-variant-numeric: tabular-nums; }
-  .was { color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
-  .chg { font-weight: 650; font-size: 13px; font-variant-numeric: tabular-nums; color: var(--muted); }
-  .chg.down { color: var(--accent); } .chg.up { color: var(--warn); }
-  .verdict { display: inline-block; border-radius: 6px; padding: 0 7px; font-size: 12px; font-weight: 650; margin-right: 6px;
-             background: var(--chip); color: var(--ink); }
-  .verdict.stable { background: var(--accent-soft); color: var(--accent); }
-  .verdict.wait { background: var(--warn-soft); color: var(--warn); }
-  .why { color: var(--muted); font-size: 13px; grid-column: 1 / -1; }
+  .small { color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  .badge { display: inline-block; border-radius: 6px; padding: 0 7px; font-size: 12px; font-weight: 650; margin-right: 6px; }
+  .badge.good { background: var(--accent-soft); color: var(--accent); }
+  .badge.above { background: var(--chip); color: var(--muted); }
+  .badge.wait { background: var(--warn-soft); color: var(--warn); }
+  .bar { grid-column: 1 / -1; position: relative; height: 18px; margin: 4px 2px 0; }
+  .bar .trk { position: absolute; left: 0; right: 0; top: 7px; height: 4px; border-radius: 2px; background: var(--track); }
+  .bar .zone { position: absolute; top: 7px; height: 4px; border-radius: 2px; background: var(--accent); opacity: .6; }
+  .bar .dot { position: absolute; top: 2px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%;
+              background: var(--ink); border: 2px solid var(--card); }
+  .line2 { grid-column: 1 / -1; font-size: 13px; color: var(--muted); }
+  .detail { border-top: 1px solid var(--line); padding: 10px 13px 12px; font-size: 13.5px; }
+  .detail svg { width: 100%; height: 120px; display: block; margin-bottom: 6px; }
+  .detail p { margin: 4px 0; }
+  .detail a.btn { display: inline-block; margin-top: 8px; min-height: 40px; line-height: 40px; padding: 0 14px; border-radius: 9px;
+                  background: var(--accent); color: var(--card); text-decoration: none; font-weight: 650; }
+  .why { color: var(--muted); font-size: 13px; }
   .empty { text-align: center; color: var(--muted); padding: 34px 10px; }
   button.more { width: 100%; min-height: 48px; border-radius: 10px; border: 1px solid var(--line);
                 background: var(--card); color: var(--ink); font: inherit; cursor: pointer; }
+  .setbar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: var(--track); margin: 6px 0 2px; grid-column: 1 / -1; }
+  .setbar i { display: block; background: var(--accent); }
   footer { color: var(--muted); font-size: 12.5px; margin-top: 22px; }
   footer p { margin: 0 0 6px; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Pokemon TCG price drops</h1>
+  <h1>Pokemon TCG prices</h1>
   <div class="sub" id="sub"></div>
   <div id="stale"></div>
-  <div class="tabs" id="tabs" role="tablist" aria-label="Report sections"></div>
+  <div class="tabs" id="tabs" role="tablist" aria-label="Views"></div>
   <div class="filters">
-    <input id="q" type="search" placeholder="Search card, number or set" autocomplete="off" aria-label="Search">
-    <details id="setbox">
+    <input id="q" class="full" type="search" placeholder="Search card, number or set" autocomplete="off" aria-label="Search">
+    <details id="setbox" class="full">
       <summary id="setsum">Sets: all</summary>
       <div class="setactions"><button type="button" id="setall">Select all</button><button type="button" id="setnone">Clear all</button></div>
       <div id="setlist"></div>
     </details>
+    <select id="dropkind" aria-label="Kind of drop"></select>
     <select id="sort" aria-label="Sort"></select>
     <select id="verdict" aria-label="Label filter"></select>
-    <label class="toggle"><input id="newrel" type="checkbox"> Show new releases (usually still falling)</label>
+    <label class="toggle full" id="atbox"><input id="atonly" type="checkbox"> Only cards at a good price</label>
+    <label class="toggle full" id="newbox"><input id="newrel" type="checkbox"> Show new releases (usually still falling)</label>
   </div>
+  <div id="evidence"></div>
   <details class="note" id="notebox"><summary id="notesum"></summary><div id="note"></div></details>
   <div id="list"></div>
   <footer id="foot"></footer>
 </div>
 <script>
 const R = /*__REPORT__*/null;
-const SECTIONS = [
-  { key: "stable", label: "Stable",       was: "90-day avg" },
-  { key: "day",    label: "24 hours",     was: "previous day" },
-  { key: "week",   label: "7 days",       was: "a week ago" },
-  { key: "avg30",  label: "vs 30-day avg", was: "30-day avg" },
-  { key: "record", label: "New lows",     was: "previous low" },
+const VIEWS = [
+  { key: "check",  label: "Price check" },
+  { key: "sets",   label: "Sets" },
+  { key: "stable", label: "Stable" },
+  { key: "drops",  label: "Drops" },
 ];
-const SORTS = [["auto", "Default order"], ["setnum", "Set, then card number"], ["pct", "Biggest % change"],
-               ["drop", "Biggest $ change"], ["cheap", "Cheapest now"], ["dear", "Most expensive now"]];
+const DROPS = [["week", "7 days", "a week ago"], ["day", "24 hours", "previous day"],
+               ["avg30", "Below 30-day avg", "30-day avg"], ["record", "New lows", "previous low"]];
+const SORTS = {
+  check: [["near", "Closest to its low"], ["setnum", "Set, then card number"], ["dear", "Most expensive"], ["cheap", "Cheapest"], ["under", "Furthest under typical"]],
+  sets: [["new", "Newest set first"], ["save", "Most to save"], ["share", "Most cards at a good price"], ["cost", "Most expensive set"]],
+  stable: [["dear", "Most expensive"], ["setnum", "Set, then card number"], ["cheap", "Cheapest"]],
+  drops: [["pct", "Biggest % drop"], ["drop", "Biggest $ drop"], ["setnum", "Set, then card number"], ["dear", "Most expensive"]],
+};
 const LABELS = ["Stable price", "Some movement", "Volatile", "Wait, still falling", "Wait, price spiking", "Wait, too new"];
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls;
   if (text != null) e.textContent = text; return e; };
 const money = (n) => "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const money0 = (n) => "$" + Math.round(n).toLocaleString("en-US");
 const niceDate = (s) => s ? new Date(s + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
 const numKey = (n) => { const m = String(n || "").match(/\d+/); return m ? parseInt(m[0], 10) : 1e9; };
-let active = "stable", shown = 60;
+const pct = (a, b) => b ? Math.round(a / b * 100) : 0;
+let view = "check", shown = 50, open = null;
+const sortChoice = {};
 
-function fill(sel, opts) { opts.forEach(([v, t]) => { const o = document.createElement("option"); o.value = v; o.textContent = t; sel.appendChild(o); }); }
+function fill(sel, opts) { sel.textContent = ""; opts.forEach(([v, t]) => { const o = document.createElement("option"); o.value = v; o.textContent = t; sel.appendChild(o); }); }
 
 function init() {
   if (!R) { $("list").appendChild(el("div", "empty", "No report yet. The first daily run has not finished.")); return; }
-  R.sections = R.sections || {}; SECTIONS.forEach((s) => { R.sections[s.key] = R.sections[s.key] || []; });
-  R.thresholds = R.thresholds || {}; R.compared = R.compared || {}; R.totals = R.totals || {};
-  $("sub").textContent = "Prices for " + niceDate(R.date) +
-    (R.cards_over_min != null ? " · " + R.cards_over_min.toLocaleString() + " card printings over " + money(R.min_price || 1) : "") +
-    " · " + (R.sets_tracked || 0) + " sets";
+  R.sections = R.sections || {}; DROPS.forEach(([k]) => { R.sections[k] = R.sections[k] || []; });
+  R.sections.stable = R.sections.stable || []; R.thresholds = R.thresholds || {}; R.compared = R.compared || {}; R.totals = R.totals || {};
+  R.pricecheck = R.pricecheck || { cards: [] }; R.pricecheck.cards = R.pricecheck.cards || [];
+  $("sub").textContent = "Prices for " + niceDate(R.date) + " · " + (R.sets_tracked || 0) + " sets · price history from " + niceDate(R.history_from || R.tracking_since);
   const ageDays = Math.floor((Date.now() - new Date(R.date + "T23:59:00Z").getTime()) / 864e5);
   if (ageDays >= 2) $("stale").appendChild(el("div", "stale",
     "These prices are " + ageDays + " days old. The daily update has stopped; check the GitHub repo's Actions tab or open issues."));
-  fill($("sort"), SORTS);
+  fill($("dropkind"), DROPS.map(([k, l]) => [k, l]));
   fill($("verdict"), [["", "All labels"]].concat(LABELS.map((l) => [l, l])).concat([["Wait", "Any Wait label"]]));
   buildSets();
-  ["q", "sort", "verdict", "newrel"].forEach((id) => $(id).addEventListener("input", () => { shown = 60; draw(); }));
+  ["q", "verdict", "newrel", "atonly", "dropkind"].forEach((id) => $(id).addEventListener("input", () => { shown = 50; draw(); }));
+  $("sort").addEventListener("input", () => { sortChoice[view] = $("sort").value; shown = 50; draw(); });
   const f = $("foot");
   (R.caveats || []).forEach((c) => f.appendChild(el("p", null, c)));
-  f.appendChild(el("p", null, "Market prices from TCGplayer via tcgcsv.com, updated once a day. Price history from " +
-    niceDate(R.history_from || R.tracking_since) + ". Cards under " + money(R.min_price || 1) + " are left out. All cards are raw (ungraded)."));
+  f.appendChild(el("p", null, "Market prices from TCGplayer via tcgcsv.com, updated once a day. Cards under " +
+    money(R.min_price || 1) + " are left out of the price check. All cards are raw (ungraded)."));
   draw();
 }
 
-// ---- set checklist: tick the sets you are collecting; remembered on this device when the browser allows it
-let ALL_SETS = [], picked = null;   // picked === null means every set
+// ---- set checklist (remembered on this device when the browser allows it)
+let ALL_SETS = [], picked = null;
 function loadPicked() {
   try { const v = JSON.parse(localStorage.getItem("pkmn-sets") || "null");
         if (Array.isArray(v)) { const known = v.filter((n) => ALL_SETS.some((s) => s.name === n)); if (known.length) picked = new Set(known); } } catch (e) {}
@@ -151,14 +174,11 @@ function setPicked(names, on) {
   if (!picked) picked = new Set(ALL_SETS.map((s) => s.name));
   names.forEach((n) => on ? picked.add(n) : picked.delete(n));
   if (picked.size === ALL_SETS.length) picked = null;
-  savePicked(); shown = 60; syncSets(); draw();
+  savePicked(); shown = 50; syncSets(); draw();
 }
+function onlySet(name) { picked = new Set([name]); savePicked(); syncSets(); }
 function buildSets() {
   ALL_SETS = (R.sets || []).slice();
-  if (!ALL_SETS.length) {
-    const seen = new Set(); SECTIONS.forEach((s) => R.sections[s.key].forEach((r) => seen.add(r.set)));
-    ALL_SETS = [...seen].sort().map((n) => ({ name: n, published: "", era: "Sets" }));
-  }
   loadPicked();
   const list = $("setlist"); list.textContent = "";
   const eras = []; ALL_SETS.forEach((s) => { if (!eras.includes(s.era)) eras.push(s.era); });
@@ -172,13 +192,12 @@ function buildSets() {
       const row = el("label", "setrow"); const cb = document.createElement("input"); cb.type = "checkbox";
       cb.dataset.set = s.name; cb.addEventListener("change", () => setPicked([s.name], cb.checked));
       row.appendChild(cb); row.appendChild(el("span", null, s.name));
-      const sup = s.supply && s.supply.state !== "steady" ? " · sealed " + (s.supply.chg30 > 0 ? "+" : "") + Math.round(s.supply.chg30) + "%" : "";
-      row.appendChild(el("small", null, (s.published ? s.published.slice(0, 4) : "") + sup));
+      row.appendChild(el("small", null, s.published ? s.published.slice(0, 4) : ""));
       list.appendChild(row);
     });
   });
-  $("setall").addEventListener("click", () => { picked = null; savePicked(); shown = 60; syncSets(); draw(); });
-  $("setnone").addEventListener("click", () => { picked = new Set(); savePicked(); shown = 60; syncSets(); draw(); });
+  $("setall").addEventListener("click", () => { picked = null; savePicked(); shown = 50; syncSets(); draw(); });
+  $("setnone").addEventListener("click", () => { picked = new Set(); savePicked(); shown = 50; syncSets(); draw(); });
   syncSets();
 }
 function syncSets() {
@@ -186,98 +205,251 @@ function syncSets() {
   $("setsum").textContent = "Sets: " + (!picked ? "all " + ALL_SETS.length : picked.size + " of " + ALL_SETS.length + " selected");
 }
 
-function rowsFor(key) {
-  const q = $("q").value.trim().toLowerCase(), sort = $("sort").value || "auto", v = $("verdict").value;
-  const showNew = $("newrel").checked;
-  const rows = R.sections[key].filter((r) => isPicked(r.set) &&
-    (showNew || v === "Wait, too new" || r.label !== "Wait, too new") &&
-    (!v || (r.label || "").indexOf(v) === 0) &&
-    (!q || (r.name + " " + r.num + " #" + r.num + " " + r.set).toLowerCase().includes(q)));
-  const by = { auto: key === "stable" ? (a, b) => b.price - a.price : (a, b) => b.pct - a.pct,
-               setnum: (a, b) => a.set.localeCompare(b.set) || numKey(a.num) - numKey(b.num) || String(a.num).localeCompare(String(b.num)),
-               pct: (a, b) => b.pct - a.pct, drop: (a, b) => b.drop - a.drop,
-               cheap: (a, b) => a.price - b.price, dear: (a, b) => b.price - a.price }[sort];
-  return rows.slice().sort(by);
+// ---- filtering and sorting
+function matches(r, q) { return !q || (r.name + " " + r.num + " #" + r.num + " " + r.set).toLowerCase().includes(q); }
+function bySetNum(a, b) { return a.set.localeCompare(b.set) || numKey(a.num) - numKey(b.num) || String(a.num).localeCompare(String(b.num)); }
+function labelOk(r, v, showNew) {
+  if (!showNew && v !== "Wait, too new" && r.label === "Wait, too new") return false;
+  return !v || (r.label || "").indexOf(v) === 0;
+}
+function checkRows() {
+  const q = $("q").value.trim().toLowerCase(), v = $("verdict").value, at = $("atonly").checked, showNew = $("newrel").checked;
+  const rows = R.pricecheck.cards.filter((r) => isPicked(r.set) && matches(r, q) && (!at || r.at) && labelOk(r, v, showNew));
+  const s = sortChoice.check || "near";
+  const by = { near: (a, b) => (a.flat - b.flat) || a.above_low - b.above_low || b.price - a.price, setnum: bySetNum,
+               dear: (a, b) => b.price - a.price, cheap: (a, b) => a.price - b.price,
+               under: (a, b) => (a.price / a.typical) - (b.price / b.typical) }[s];
+  return rows.sort(by);
+}
+function listRows(key) {
+  const q = $("q").value.trim().toLowerCase(), v = $("verdict").value, showNew = $("newrel").checked;
+  const rows = (R.sections[key] || []).filter((r) => isPicked(r.set) && matches(r, q) && labelOk(r, v, showNew));
+  const s = sortChoice[view] || (view === "stable" ? "dear" : "pct");
+  const by = { pct: (a, b) => b.pct - a.pct, drop: (a, b) => b.drop - a.drop, setnum: bySetNum,
+               dear: (a, b) => b.price - a.price, cheap: (a, b) => a.price - b.price }[s];
+  return rows.sort(by);
+}
+function setRows() {
+  const q = $("q").value.trim().toLowerCase();
+  const rows = (R.sets || []).filter((s) => s.view && (!q || s.name.toLowerCase().includes(q)));
+  const s = sortChoice.sets || "new";
+  const save = (x) => x.view.market_total - x.view.target_total;
+  const by = { new: (a, b) => b.published.localeCompare(a.published), save: (a, b) => save(b) - save(a),
+               share: (a, b) => pct(b.view.at, b.view.checked) - pct(a.view.at, a.view.checked),
+               cost: (a, b) => b.view.market_total - a.view.market_total }[s];
+  return rows.sort(by);
 }
 
-function changeText(r, key) {
-  if (key === "stable") {   // versus the 90-day average, same +/-3% band the reasons use
-    const p = -r.pct;
-    if (Math.abs(p) < 3) return ["at its 90-day avg", ""];
-    return p < 0 ? [Math.abs(p).toFixed(1) + "% under 90-day avg", "down"] : [p.toFixed(1) + "% over 90-day avg", "up"];
-  }
-  return ["↓ " + r.pct + "% (" + money(r.drop) + ")", "down"];
-}
-
+// ---- drawing
 function draw() {
   const tabs = $("tabs"); tabs.textContent = "";
-  SECTIONS.forEach((s) => {
+  const counts = { check: checkRows().length, sets: setRows().length, stable: listRows("stable").length,
+                   drops: listRows($("dropkind").value || "week").length };
+  VIEWS.forEach((t) => {
     const b = el("button", "tab"); b.type = "button"; b.setAttribute("role", "tab");
-    b.setAttribute("aria-selected", String(s.key === active));
-    b.appendChild(el("b", null, rowsFor(s.key).length)); b.appendChild(el("span", null, s.label));
-    b.addEventListener("click", () => {
-      active = s.key; shown = 60; draw();
-      try { $("tabs").querySelector('[aria-selected="true"]').focus(); } catch (e) {}
-    });
+    b.setAttribute("aria-selected", String(t.key === view));
+    b.appendChild(el("b", null, counts[t.key].toLocaleString())); b.appendChild(el("span", null, t.label));
+    b.addEventListener("click", () => { view = t.key; shown = 50; open = null; draw();
+      try { $("tabs").querySelector('[aria-selected="true"]').focus(); } catch (e) {} });
     tabs.appendChild(b);
   });
-  const sec = SECTIONS.find((s) => s.key === active), rows = rowsFor(active), th = R.thresholds[active] || {};
-  let sum, note;
-  if (active === "stable") {
-    sum = "Prices that have barely moved for a month. What this means ▾";
-    note = "Cards whose market price has been flat for about 30 days and is not in a new release. Waiting is unlikely to save much on these, " +
-      "but in the Aug–Nov 2026 backtest they still drifted down about 2% a month on average while the whole market fell. " +
-      "It is a low-risk list, not a bargain list. Every stable card is listed, for every set.";
-  } else {
-    sum = "Down at least " + money(th.min_drop_usd || 0) + " and " + (th.min_drop_pct || 0) + "% ▾";
-    note = active === "day" ? (R.compared.day ? "Compared with " + niceDate(R.compared.day) + "." : "No recent earlier day on file.")
-      : active === "week" ? (R.compared.week ? "Compared with " + niceDate(R.compared.week) + "." : "Needs a week of history.")
-      : active === "avg30" ? "Below the card's own average over the last 30 days (needs " + (th.min_days_of_history || 0) + "+ days of its prices)."
-      : "Below the lowest price in the card's own history (needs " + (th.min_days_of_history || 0) + "+ days of its prices).";
-    note += " A drop usually means the price is still falling: the Wait labels fell the most in the backtest.";
-    const total = R.totals[active];
-    if (total != null && total > R.sections[active].length)
-      note += " Showing up to " + R.max_rows_per_set + " per set: " + R.sections[active].length + " of " + total + " cards.";
-    if (!$("newrel").checked) note += " New releases are hidden; tick the box above to show them.";
+  fill($("sort"), SORTS[view]); $("sort").value = sortChoice[view] || SORTS[view][0][0];
+  $("dropkind").classList.toggle("hide", view !== "drops");
+  $("verdict").classList.toggle("hide", view === "sets");
+  $("sort").classList.toggle("full", view === "sets");
+  $("atbox").classList.toggle("hide", view !== "check");
+  $("newbox").classList.toggle("hide", view === "sets" || view === "stable");
+  $("setbox").classList.toggle("hide", view === "sets");
+  $("evidence").textContent = "";
+  if (view === "check") drawCheck(); else if (view === "sets") drawSets(); else drawList();
+}
+
+function evidenceBox() {
+  const sc = (R.pricecheck.scorecard || {}), a = sc.all_dates || {}, box = el("div", "evidence");
+  if (!a.at) {
+    box.appendChild(el("div", null, "Track record: not enough history yet. It needs about " +
+      ((R.pricecheck.rule || {}).min_days || 90) + " days of prices plus " + (sc.outlook_days || 60) +
+      " days to see what happened next. Older price history is being loaded, so this fills in over the next few days."));
+    return box;
   }
-  $("notesum").textContent = sum; $("note").textContent = note;
+  const r = (x, n) => n ? Math.round(x / n * 100) + "%" : "–";
+  const p1 = el("div"); p1.appendChild(document.createTextNode("Track record: on " + a.dates + " past dates (" + niceDate(a.from) + " – " + niceDate(a.to) + "), cards at a good price went another " + sc.deeper_pct + "%+ lower within " + sc.outlook_days + " days "));
+  p1.appendChild(el("b", null, r(a.at_deeper, a.at))); p1.appendChild(document.createTextNode(" of the time (all cards: " + r(a.all_deeper, a.all) + ")."));
+  box.appendChild(p1);
+  box.appendChild(el("div", null, "If the card had steadied: " + r(a.at_steady_deeper, a.at_steady) + ". If it was still falling 10%+ a month: " + r(a.at_falling_deeper, a.at_falling) + ". " +
+    "Of cards bought at a good price, " + r(a.at_buckets[0], a.at) + " never dropped more than 5% further."));
+  const live = sc.live || {};
+  box.appendChild(el("div", "small", live.at ? "Since the rule was fixed (" + niceDate(sc.rule_since) + "): " + r(live.at_deeper, live.at) + " went " + sc.deeper_pct + "%+ lower, over " + live.dates + " dates."
+                                       : "Live results (dates after the rule was fixed on " + niceDate(sc.rule_since) + ") start appearing " + (sc.outlook_days || 60) + " days after that."));
+  return box;
+}
+
+function drawCheck() {
+  const rows = checkRows(), pcr = R.pricecheck.rule || {};
+  $("evidence").appendChild(evidenceBox());
+  $("notesum").textContent = (R.pricecheck.at_target || 0).toLocaleString() + " of " + (R.pricecheck.checked || 0).toLocaleString() + " cards are at a good price today. How this works ▾";
+  $("note").textContent = "Each card's good price is the level it was at or below on only " + (pcr.target_pctile || 20) + "% of its days over the last year " +
+    "(or over all its history if shorter; at least " + (pcr.min_days || 90) + " days needed). The bar runs from the card's lowest to highest price in that time; the green part is the good-price zone and the dot is today. " +
+    "This describes the card's own history, not a forecast. A card can be at a good price and still be falling: check its label. " +
+    "While the whole market is falling, many cards sit at their lows, so the count above is high." + (!$("newrel").checked ? " New releases are hidden." : "");
   const list = $("list"); list.textContent = "";
   if (!rows.length) { list.appendChild(el("div", "empty", "Nothing here with these filters.")); return; }
-  rows.slice(0, shown).forEach((r) => {
-    const a = el("a", "row"); a.href = "https://www.tcgplayer.com/product/" + encodeURIComponent(r.id);
-    a.target = "_blank"; a.rel = "noopener";
-    a.appendChild(el("div", "name", r.name));
-    const p = el("div", "price");
-    p.appendChild(el("div", "now", money(r.price)));
-    const [txt, cls] = changeText(r, active);
-    p.appendChild(el("div", "chg " + cls, txt));
-    p.appendChild(el("div", "was", sec.was + " " + money(r.was)));
-    a.appendChild(p);
-    const m = el("div", "meta");
-    m.appendChild(el("span", "chip", r.printing));
-    m.appendChild(document.createTextNode([r.set, r.num ? "#" + r.num : "", r.rarity].filter(Boolean).join(" · ")));
-    a.appendChild(m);
-    if (r.listing != null) {
-      const gap = Math.round((r.listing / r.price - 1) * 100);
-      a.appendChild(el("div", "meta", "Cheapest listing, any condition: " + money(r.listing) +
-        (gap <= -10 ? " (" + Math.abs(gap) + "% under market, likely played)" : "")));
-    }
-    if (r.label || (r.why && r.why.length)) {
-      const w = el("div", "why");
-      if (r.label) {
-        const cls = r.label === "Stable price" ? "stable" : r.label.indexOf("Wait") === 0 ? "wait" : "";
-        w.appendChild(el("span", "verdict " + cls, r.label + (r.score != null ? " · stability " + r.score : "")));
-      }
-      w.appendChild(document.createTextNode((r.why || []).join(" · ") +
-        (active === "record" && r.since ? " · history since " + niceDate(r.since) : "")));
-      a.appendChild(w);
-    }
-    list.appendChild(a);
+  rows.slice(0, shown).forEach((r) => list.appendChild(checkItem(r)));
+  more(list, rows.length);
+}
+
+function checkItem(r) {
+  const item = el("div", "item" + (r.at ? " good" : ""));
+  const head = el("div", "head"); head.setAttribute("role", "button"); head.tabIndex = 0;
+  const left = el("div"); left.appendChild(el("div", "name", r.name));
+  const m = el("div", "meta"); m.appendChild(el("span", "chip", r.printing));
+  m.appendChild(document.createTextNode([r.set, r.num ? "#" + r.num : ""].filter(Boolean).join(" · "))); left.appendChild(m);
+  head.appendChild(left);
+  const p = el("div", "price"); p.appendChild(el("div", "now", money(r.price)));
+  p.appendChild(el("div", "small", "good ≤ " + money(r.target))); head.appendChild(p);
+  // range bar: low ... high, good-price zone, today
+  const span = Math.max(r.high - r.low, 0.01), pos = (x) => Math.min(100, Math.max(0, (x - r.low) / span * 100));
+  const bar = el("div", "bar"); bar.appendChild(el("div", "trk"));
+  const zone = el("div", "zone"); zone.style.left = "0%"; zone.style.width = pos(r.target) + "%"; bar.appendChild(zone);
+  const dot = el("div", "dot"); dot.style.left = pos(r.price) + "%"; bar.appendChild(dot);
+  head.appendChild(bar);
+  const l2 = el("div", "line2");
+  const span1 = r.days >= 330 ? "1-year" : r.days + "-day";
+  if (r.flat) {
+    l2.appendChild(el("span", "badge above", "No price movement"));
+    l2.appendChild(document.createTextNode("about the same price for " + r.days + " days, so there is no low point to compare with"));
+  } else {
+    l2.appendChild(el("span", "badge " + (r.at ? "good" : "above"), r.at ? "At good price" : "Above good price"));
+    if (r.label && r.label.indexOf("Wait") === 0) l2.appendChild(el("span", "badge wait", r.label.replace("Wait, ", "")));
+    l2.appendChild(document.createTextNode(r.above_low < 0.5 ? "at its " + span1 + " low (" + money(r.low) + ")"
+      : Math.round(r.above_low) + "% above its " + span1 + " low (" + money(r.low) + ")"));
+  }
+  head.appendChild(l2);
+  item.appendChild(head);
+  const key = r.id + "|" + r.printing;
+  const toggle = () => { open = open === key ? null : key; draw(); };
+  head.addEventListener("click", toggle);
+  head.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
+  if (open === key) item.appendChild(detail(r));
+  return item;
+}
+
+function detail(r) {
+  const d = el("div", "detail");
+  d.appendChild(chart(r));
+  d.appendChild(el("p", null, "Low " + money(r.low) + " · typical " + money(r.typical) + " · high " + money(r.high) + " over " + r.days + " days of prices."));
+  if (!r.flat) d.appendChild(el("p", null, "Good price: " + money(r.target) + " or less. Today " + money(r.price) +
+    (r.at ? " is at a good price." : r.price <= r.target ? " matches it, but the card has sat at this price for much of the period." : " is " + Math.max(1, Math.round((r.price / r.target - 1) * 100)) + "% above it.")));
+  if (r.label) d.appendChild(el("p", null, "Label: " + r.label + (r.score != null ? " (stability " + r.score + ")" : "") + "." +
+      (r.label === "Wait, still falling" ? " It is near its low because it is still dropping; it may go lower." : "")));
+  if (r.flat) d.appendChild(el("p", null, "The price has barely moved all year, which usually means few sales; treat it with care."));
+  if (r.listing != null) d.appendChild(el("p", "why", "Cheapest listing, any condition: " + money(r.listing) + (r.listing < r.price * 0.9 ? " (likely a played copy)" : "") + "."));
+  const a = el("a", "btn", "Open on TCGplayer"); a.href = "https://www.tcgplayer.com/product/" + encodeURIComponent(r.id);
+  a.target = "_blank"; a.rel = "noopener"; d.appendChild(a);
+  return d;
+}
+
+function chart(r) {
+  const NS = "http://www.w3.org/2000/svg", W = 320, H = 120, P = 6;
+  const svg = document.createElementNS(NS, "svg"); svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+  svg.setAttribute("role", "img"); svg.setAttribute("aria-label", "Price over the last " + r.days + " days");
+  const pts = (r.spark || []).map((v, i) => [i, v]).filter((p) => p[1] != null);
+  if (pts.length < 2) return svg;
+  const vals = pts.map((p) => p[1]).concat([r.target]);
+  const lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals), span = Math.max(hi - lo, 0.01), n = r.spark.length - 1;
+  const x = (i) => P + i / n * (W - 2 * P), y = (v) => H - P - (v - lo) / span * (H - 2 * P);
+  let cs = null; try { cs = getComputedStyle(document.documentElement); } catch (e) {}
+  const col = (v, f) => (cs && cs.getPropertyValue(v).trim()) || f;
+  const ln = document.createElementNS(NS, "line"); ln.setAttribute("x1", P); ln.setAttribute("x2", W - P);
+  ln.setAttribute("y1", y(r.target)); ln.setAttribute("y2", y(r.target)); ln.setAttribute("stroke", col("--accent", "#1f6f4a"));
+  ln.setAttribute("stroke-width", "1.5"); ln.setAttribute("stroke-dasharray", "4 4"); svg.appendChild(ln);
+  const path = document.createElementNS(NS, "polyline");
+  path.setAttribute("points", pts.map((p) => x(p[0]).toFixed(1) + "," + y(p[1]).toFixed(1)).join(" "));
+  path.setAttribute("fill", "none"); path.setAttribute("stroke", col("--ink", "#1c1f24")); path.setAttribute("stroke-width", "2");
+  svg.appendChild(path);
+  const last = pts[pts.length - 1], c = document.createElementNS(NS, "circle");
+  c.setAttribute("cx", x(last[0])); c.setAttribute("cy", y(last[1])); c.setAttribute("r", "4"); c.setAttribute("fill", col("--ink", "#1c1f24"));
+  svg.appendChild(c);
+  const t = document.createElementNS(NS, "text"); t.setAttribute("x", W - P); t.setAttribute("y", Math.max(12, y(r.target) - 4));
+  t.setAttribute("text-anchor", "end"); t.setAttribute("font-size", "11"); t.setAttribute("fill", col("--accent", "#1f6f4a"));
+  t.textContent = "good ≤ " + money(r.target); svg.appendChild(t);
+  return svg;
+}
+
+function drawSets() {
+  const rows = setRows();
+  $("notesum").textContent = "What it would cost to finish each set. How this works ▾";
+  $("note").textContent = "For every printing of every card in the set (reverse holos included): the total at today's market prices, and the total if each card " +
+    "over " + money(R.min_price || 1) + " were bought at its good price or today's price, whichever is lower. Cards with no market price are not counted. " +
+    "Tap a set to see its cards in the price check.";
+  const list = $("list"); list.textContent = "";
+  if (!rows.length) { list.appendChild(el("div", "empty", "Nothing here.")); return; }
+  rows.forEach((s) => {
+    const v = s.view, item = el("div", "item"), head = el("div", "head"); head.setAttribute("role", "button"); head.tabIndex = 0;
+    const left = el("div"); left.appendChild(el("div", "name", s.name));
+    left.appendChild(el("div", "meta", (s.published || "").slice(0, 4) + " · " + v.printings + " printings priced"));
+    head.appendChild(left);
+    const p = el("div", "price"); p.appendChild(el("div", "now", money0(v.market_total)));
+    p.appendChild(el("div", "small", "at good prices " + money0(v.target_total))); head.appendChild(p);
+    const bar = el("div", "setbar"); const fillb = el("i"); fillb.style.width = pct(v.at, v.checked) + "%"; bar.appendChild(fillb); head.appendChild(bar);
+    head.appendChild(el("div", "line2", !v.checked ? "Too new for a price check: cards need " + ((R.pricecheck.rule || {}).min_days || 90) + " days of prices."
+      : v.at + " of " + v.checked + " cards over " + money(R.min_price || 1) + " are at a good price · waiting on the rest could save about " +
+        money0(v.market_total - v.target_total)));
+    item.appendChild(head);
+    const go = () => { onlySet(s.name); $("newrel").checked = true; view = "check"; shown = 50; sortChoice.check = "setnum"; draw(); };
+    head.addEventListener("click", go);
+    head.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
+    list.appendChild(item);
   });
-  if (rows.length > shown) {
-    const more = el("button", "more", "Show more (" + (rows.length - shown) + " left)"); more.type = "button";
-    more.addEventListener("click", () => { shown += 60; draw(); });
-    list.appendChild(more);
+}
+
+function drawList() {
+  const key = view === "stable" ? "stable" : ($("dropkind").value || "week");
+  const kind = DROPS.find((d) => d[0] === key), th = R.thresholds[key] || {};
+  const rows = listRows(key);
+  if (view === "stable") {
+    $("notesum").textContent = "Prices that have barely moved for a month. What this means ▾";
+    $("note").textContent = "Cards whose market price has been flat for about 30 days and is not in a new release. Waiting is unlikely to save much on these, " +
+      "but in the Aug–Nov 2026 backtest they still drifted down about 2% a month on average while the whole market fell. Low risk, not bargains.";
+  } else {
+    $("notesum").textContent = "Down at least " + money(th.min_drop_usd || 0) + " and " + (th.min_drop_pct || 0) + "% ▾";
+    let note = key === "day" ? (R.compared.day ? "Compared with " + niceDate(R.compared.day) + "." : "No recent earlier day on file.")
+      : key === "week" ? (R.compared.week ? "Compared with " + niceDate(R.compared.week) + "." : "Needs a week of history.")
+      : key === "avg30" ? "Below the card's own average over the last 30 days." : "Below the lowest price in the card's own history (60+ days of it).";
+    note += " A drop usually means the price is still falling.";
+    const total = R.totals[key];
+    if (total != null && total > (R.sections[key] || []).length) note += " Showing up to " + R.max_rows_per_set + " per set: " + R.sections[key].length + " of " + total + ".";
+    $("note").textContent = note;
+  }
+  const list = $("list"); list.textContent = "";
+  if (!rows.length) { list.appendChild(el("div", "empty", "Nothing here with these filters.")); return; }
+  const was = view === "stable" ? "90-day avg" : kind[2];
+  rows.slice(0, shown).forEach((r) => {
+    const item = el("div", "item"), head = el("div", "head");
+    const left = el("div"); left.appendChild(el("div", "name", r.name));
+    const m = el("div", "meta"); m.appendChild(el("span", "chip", r.printing));
+    m.appendChild(document.createTextNode([r.set, r.num ? "#" + r.num : ""].filter(Boolean).join(" · "))); left.appendChild(m);
+    head.appendChild(left);
+    const p = el("div", "price"); p.appendChild(el("div", "now", money(r.price)));
+    if (view === "stable") { const d = -r.pct; p.appendChild(el("div", "small", Math.abs(d) < 3 ? "at its 90-day avg" : Math.abs(d).toFixed(1) + "% " + (d < 0 ? "under" : "over") + " 90-day avg")); }
+    else p.appendChild(el("div", "small", "↓ " + r.pct + "% (" + money(r.drop) + ")"));
+    p.appendChild(el("div", "small", was + " " + money(r.was))); head.appendChild(p);
+    const w = el("div", "line2");
+    if (r.label) w.appendChild(el("span", "badge " + (r.label.indexOf("Wait") === 0 ? "wait" : r.label === "Stable price" ? "good" : "above"), r.label));
+    w.appendChild(document.createTextNode((r.why || []).join(" · ")));
+    head.appendChild(w);
+    const a = el("a", "small", "Open on TCGplayer ›"); a.href = "https://www.tcgplayer.com/product/" + encodeURIComponent(r.id); a.target = "_blank"; a.rel = "noopener";
+    a.style.gridColumn = "1 / -1"; head.appendChild(a);
+    item.appendChild(head); list.appendChild(item);
+  });
+  more(list, rows.length);
+}
+
+function more(list, total) {
+  if (total > shown) {
+    const b = el("button", "more", "Show more (" + (total - shown) + " left)"); b.type = "button";
+    b.addEventListener("click", () => { shown += 50; draw(); });
+    list.appendChild(b);
   }
 }
 init();

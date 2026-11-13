@@ -12,8 +12,15 @@ A daily report of Pokemon TCG card prices for completing master sets: which card
 
 ## What the dashboard shows
 
-- **Stable:** cards whose price has barely moved for a month. Waiting is unlikely to save much on these, but they are not bargains: in the Aug–Nov 2026 backtest they still drifted down about 2% a month while the market fell.
-- **24 hours / 7 days / vs 30-day avg / New lows:** price drops. A drop usually means the price is still falling.
+- **Price check** (opens first): every card worth $1 or more, compared with its own last year of prices.
+  - A bar from its lowest to its highest price, with a green good-price zone and a dot for today.
+  - "Good price" is the level the card was at or below on only 20% of its days in the last year. At least 90 days of prices are needed.
+  - Tapping a card shows its price chart, its typical and high prices, its label, and a link to TCGplayer.
+  - Cards whose price never moves (few sales) are flagged rather than called a good price.
+- **Track record**, shown at the top of the price check: on past dates, how often cards at a good price went another 10%+ lower within 60 days, compared with all cards. It is split by whether the card had steadied or was still falling. Computed from the history in `tracker/pricecheck.py` and cached in `data/pricecheck_scorecard.json`. Dates after the rule was fixed (`pricecheck_rule_since`) are also reported separately as live results.
+- **Sets:** what every printing in each set costs at today's market prices, against the cost at good prices, and how many cards are at a good price. Tapping a set opens its cards in the price check.
+- **Stable:** cards whose price has barely moved for a month.
+- **Drops:** 7-day, 24-hour, below 30-day average, and new-low drops.
 - **Labels on every card:**
   - Wait, too new
   - Wait, still falling
@@ -22,8 +29,11 @@ A daily report of Pokemon TCG card prices for completing master sets: which card
   - Some movement
   - Volatile
 
-  The Wait labels are the most reliable part: those cards fell the most afterwards.
-- **Stability score (0–100):** how flat the price has been over 30 days. It describes history; it is not a prediction.
+  The Wait labels were the most reliable in testing.
+
+## Price history
+
+`.github/workflows/history.yml` loads tcgcsv's archives back to their start (Feb 2024), about one every 30 seconds, 60 per run, three runs a day. Each day is downloaded once. Once the history is complete its runs finish in seconds, and the workflow can be disabled.
 
 ## Limits
 

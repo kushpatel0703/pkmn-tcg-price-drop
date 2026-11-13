@@ -33,10 +33,12 @@ import tempfile
 import time
 import urllib.error
 import urllib.request
+from array import array
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from score import score_card, supply_signal, median  # noqa: E402
+import pricecheck  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 BASE = os.environ.get("TCGCSV_BASE", "https://tcgcsv.com").rstrip("/")
@@ -48,6 +50,7 @@ PAUSE = float(os.environ.get("TCGCSV_PAUSE", "0.25"))
 ARCHIVE_PAUSE = float(os.environ.get("TCGCSV_ARCHIVE_PAUSE", "10"))
 MAX_JSON_BYTES = 50 * 2**20
 MAX_ARCHIVE_BYTES = 400 * 2**20
+NAN = float("nan")
 
 
 # ---------------------------------------------------------------- fetching
@@ -445,31 +448,48 @@ CAVEATS = [
 ]
 
 
+def load_matrix(days, keep):
+    """Market price of each kept (product, printing) on every day: {key: array},
+    NaN where the day has no price. Reads each snapshot once."""
+    n = len(days)
+    matrix = {k: array("f", [NAN]) * n for k in keep}
+    for i, d in enumerate(days):
+        with gzip.open(SNAP_DIR / f"{d}.csv.gz", "rt", newline="") as fh:
+            rd = csv.reader(fh)
+            next(rd, None)
+            for pid, sub, m, _ in rd:
+                a = matrix.get((int(pid), sub))
+                if a is not None:
+                    a[i] = float(m)
+    return matrix
+
+
 def analyse(cfg, cards, set_of, days, groups, sealed_by_set=None):
     """days: sorted list of snapshot dates, last one is 'today'."""
     today = days[-1]
     t = dt.date.fromisoformat(today)
+    n = len(days)
+    ords = [dt.date.fromisoformat(d).toordinal() for d in days]
     cur = read_snapshot(SNAP_DIR / f"{today}.csv.gz")
-    prev_day = days[-2] if len(days) > 1 else None
-    if prev_day and (t - dt.date.fromisoformat(prev_day)).days > 3:
-        prev_day = None
-    prev = read_snapshot(SNAP_DIR / f"{prev_day}.csv.gz") if prev_day else {}
+    sealed_ids = {pid for s in (sealed_by_set or {}).values() for pid in s}
+    keep = {k for k, (m, _) in cur.items()
+            if (str(k[0]) in cards and m >= cfg["min_price"]) or str(k[0]) in sealed_ids}
+    matrix = load_matrix(days, keep)
 
-    week_day = None
-    for d in reversed(days[:-1]):
-        if 7 <= (t - dt.date.fromisoformat(d)).days <= 10:
-            week_day = d
-            break
-    week = read_snapshot(SNAP_DIR / f"{week_day}.csv.gz") if week_day else {}
+    prev_i = n - 2 if n > 1 and ords[-1] - ords[-2] <= 3 else None
+    prev_day = days[prev_i] if prev_i is not None else None
+    week_i = next((i for i in range(n - 2, -1, -1) if 7 <= ords[-1] - ords[i] <= 10), None)
+    week_day = days[week_i] if week_i is not None else None
 
-    sums, counts, lows, low_day, series, first_day, ndays = {}, {}, {}, {}, {}, {}, {}
-    for d in days[:-1]:
-        snap = read_snapshot(SNAP_DIR / f"{d}.csv.gz")
-        age = (t - dt.date.fromisoformat(d)).days
-        for k, (m, _) in snap.items():
-            if k not in cur:
+    sums, counts, lows, low_day, series, first_day, ndays, prev, week = {}, {}, {}, {}, {}, {}, {}, {}, {}
+    for k, a in matrix.items():
+        for i in range(n - 1):
+            m = a[i]
+            if math.isnan(m):
                 continue
-            first_day.setdefault(k, d)
+            age = ords[-1] - ords[i]
+            if k not in first_day:
+                first_day[k] = days[i]
             ndays[k] = ndays.get(k, 0) + 1
             if age <= 93:
                 series.setdefault(k, []).append((age, m))
@@ -477,7 +497,11 @@ def analyse(cfg, cards, set_of, days, groups, sealed_by_set=None):
                 sums[k] = sums.get(k, 0.0) + m
                 counts[k] = counts.get(k, 0) + 1
             if k not in lows or m < lows[k]:
-                lows[k], low_day[k] = m, d
+                lows[k], low_day[k] = m, days[i]
+        if prev_i is not None and not math.isnan(a[prev_i]):
+            prev[k] = a[prev_i]
+        if week_i is not None and not math.isnan(a[week_i]):
+            week[k] = a[week_i]
 
     th = cfg["thresholds"]
     group_of = {g["name"]: g for g in groups}
@@ -496,17 +520,28 @@ def analyse(cfg, cards, set_of, days, groups, sealed_by_set=None):
             return None                   # seen since the history starts: age unknown, not new
         return (t - dt.date.fromisoformat(first_day[k])).days
 
+    card_keys = [k for k in matrix if str(k[0]) in cards]
     scores = {}
-    for k, (m, _) in cur.items():
+    for k in card_keys:
+        m = cur[k][0]
         pid = str(k[0])
-        if pid not in cards or m < cfg["min_price"]:
-            continue
         g = group_of.get(set_of[pid])
         months = (t - dt.date.fromisoformat(g["published"])).days / 30.44 if g else None
         sc = score_card(m, series.get(k, []), months, bool(g and g["id"] in undated_ids),
                         card_age(k), supply.get(set_of[pid]))
         if sc:
             scores[k] = sc
+
+    def label_of(k):
+        sc = scores.get(k)
+        if sc:
+            return sc["label"], sc["score"], sc["why"]
+        g = group_of.get(set_of[str(k[0])])
+        age = card_age(k)
+        if (g and g["id"] not in undated_ids and (t - dt.date.fromisoformat(g["published"])).days < 91) \
+                or (age is not None and age < 45):
+            return "Wait, too new", None, ["new release; prices usually keep falling for a few months"]
+        return None, None, [f"only {ndays.get(k, 0) + 1} days of price history, too few to judge"]
 
     def row(k, ref, extra=None):
         pid, sub = k
@@ -516,17 +551,12 @@ def analyse(cfg, cards, set_of, days, groups, sealed_by_set=None):
              "set": set_of[str(pid)], "printing": sub, "price": round(m, 2),
              "listing": low, "was": round(ref, 2), "drop": round(ref - m, 2),
              "pct": round((ref - m) / ref * 100, 1), "hist_days": ndays.get(k, 0) + 1}
-        sc = scores.get(k)
-        if sc:
-            r.update({"score": sc["score"], "label": sc["label"], "why": sc["why"]})
-        else:
-            g = group_of.get(r["set"])
-            age = card_age(k)
-            if (g and g["id"] not in undated_ids and (t - dt.date.fromisoformat(g["published"])).days < 91) \
-                    or (age is not None and age < 45):
-                r.update({"label": "Wait, too new", "why": ["new release; prices usually keep falling for a few months"]})
-            else:
-                r.update({"why": [f"only {r['hist_days']} days of price history, too few to judge"]})
+        label, score, why = label_of(k)
+        if label:
+            r["label"] = label
+        if score is not None:
+            r["score"] = score
+        r["why"] = why
         if extra:
             r.update(extra)
         return r
@@ -535,13 +565,12 @@ def analyse(cfg, cards, set_of, days, groups, sealed_by_set=None):
         return ref > m and ref - m >= rule["min_drop_usd"] and (ref - m) / ref * 100 >= rule["min_drop_pct"]
 
     sections = {"stable": [], "day": [], "week": [], "avg30": [], "record": []}
-    for k, (m, _) in cur.items():
-        if str(k[0]) not in cards or m < cfg["min_price"]:
-            continue
-        if k in prev and passes(m, prev[k][0], th["day"]):
-            sections["day"].append(row(k, prev[k][0]))
-        if k in week and passes(m, week[k][0], th["week"]):
-            sections["week"].append(row(k, week[k][0]))
+    for k in card_keys:
+        m = cur[k][0]
+        if k in prev and passes(m, prev[k], th["day"]):
+            sections["day"].append(row(k, prev[k]))
+        if k in week and passes(m, week[k], th["week"]):
+            sections["week"].append(row(k, week[k]))
         if counts.get(k, 0) >= th["avg30"]["min_days_of_history"]:
             avg = sums[k] / counts[k]
             if passes(m, avg, th["avg30"]):
@@ -569,6 +598,52 @@ def analyse(cfg, cards, set_of, days, groups, sealed_by_set=None):
                 kept.append(r)
         rows[:] = kept
 
+    # ---- price check: where today's price sits in each card's own last year
+    pc_cards, checks = [], {}
+    for k in card_keys:
+        c = pricecheck.check(matrix[k], ords, n - 1)
+        if not c:
+            continue
+        checks[k] = c
+        y = pricecheck.check(matrix[k], ords, n - 2) if prev_i is not None else None
+        pid, sub = k
+        cd = cards[str(pid)]
+        label, score, _ = label_of(k)
+        pc_cards.append({
+            "id": pid, "name": cd["name"], "num": cd["num"], "rarity": cd["rarity"], "set": set_of[str(pid)],
+            "printing": sub, "price": round(c["price"], 2), "listing": cur[k][1],
+            "low": round(c["low"], 2), "high": round(c["high"], 2), "typical": round(c["med"], 2),
+            "target": round(c["target"], 2), "days": c["days"], "at": c["at"], "flat": c["flat"],
+            "newly": bool(c["at"] and y and not y["at"]),
+            "above_low": round((c["price"] / c["low"] - 1) * 100, 1),
+            "label": label, "score": score, "spark": pricecheck.spark(matrix[k], ords, n - 1)})
+    pc_cards.sort(key=lambda r: (r["above_low"], -r["price"]))
+    card_matrix = {k: matrix[k] for k in card_keys}
+    card_score = pricecheck.scorecard(card_matrix, ords, days, cfg["min_price"],
+                                      ROOT / "data" / "pricecheck_scorecard.json",
+                                      cfg.get("pricecheck_rule_since", today))
+
+    # ---- whole-set view: cost of every printing now vs at each card's good price
+    setview = {}
+    for k, (m, _) in cur.items():
+        pid = str(k[0])
+        if pid not in cards:
+            continue
+        sv = setview.setdefault(set_of[pid], {"printings": 0, "market_total": 0.0, "target_total": 0.0,
+                                               "checked": 0, "at": 0, "above": 0})
+        sv["printings"] += 1
+        sv["market_total"] += m
+        c = checks.get(k)
+        if c:
+            sv["checked"] += 1
+            sv["at" if c["at"] else "above"] += 1
+            sv["target_total"] += min(m, c["target"])
+        else:
+            sv["target_total"] += m
+    for sv in setview.values():
+        sv["market_total"] = round(sv["market_total"], 2)
+        sv["target_total"] = round(sv["target_total"], 2)
+
     in_report = set(set_of.values())
     return {
         "date": today,
@@ -577,10 +652,11 @@ def analyse(cfg, cards, set_of, days, groups, sealed_by_set=None):
         "history_from": days[0],
         "days_of_history": len(days),
         "cards_priced": sum(1 for k in cur if str(k[0]) in cards),
-        "cards_over_min": sum(1 for k, (m, _) in cur.items() if str(k[0]) in cards and m >= cfg["min_price"]),
+        "cards_over_min": len(card_keys),
         "sets_tracked": len(in_report),
         "sets": [{"name": g["name"], "published": g["published"], "era": g["era"],
-                  **({"supply": supply[g["name"]]} if g["name"] in supply else {})}
+                  **({"supply": supply[g["name"]]} if g["name"] in supply else {}),
+                  **({"view": setview[g["name"]]} if g["name"] in setview else {})}
                  for g in groups if g["name"] in in_report],
         "thresholds": th,
         "min_price": cfg["min_price"],
@@ -589,6 +665,11 @@ def analyse(cfg, cards, set_of, days, groups, sealed_by_set=None):
         "labels": labels,
         "totals": totals,
         "caveats": CAVEATS,
+        "pricecheck": {"rule": {"window_days": pricecheck.WINDOW_DAYS, "target_pctile": int(pricecheck.TARGET_PCTILE * 100),
+                                "min_days": pricecheck.MIN_DAYS, "spark_step_days": pricecheck.SPARK_STEP},
+                       "checked": len(pc_cards), "at_target": sum(r["at"] for r in pc_cards),
+                       "newly_at_target": sum(r["newly"] for r in pc_cards),
+                       "scorecard": card_score, "cards": pc_cards},
         "sections": sections,
     }
 
