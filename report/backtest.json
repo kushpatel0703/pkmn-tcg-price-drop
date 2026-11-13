@@ -1,117 +1,139 @@
 {
- "look_ahead_days": 30,
+ "look_ahead_days": 14,
  "out_of_sample_only": false,
  "tuned_window": [
   "2026-09-08",
   "2026-11-12"
  ],
  "dates_tested": [
-  "2026-10-13",
-  "2026-10-06",
-  "2026-09-29",
-  "2026-09-22"
+  "2026-10-21",
+  "2026-10-14",
+  "2026-10-07",
+  "2026-09-30",
+  "2026-09-23"
  ],
  "history": [
   "2026-07-19",
   "2026-11-12"
  ],
  "all": {
-  "cards": 16460,
-  "median_change_pct": -4.1,
-  "cheaper5_pct": 47,
-  "dearer5_pct": 17,
-  "best_wait_saving_pct": 8.0
+  "cards": 20641,
+  "median_change_pct": -1.7,
+  "cheaper5_pct": 32,
+  "dearer5_pct": 15,
+  "best_wait_saving_pct": 4.0
  },
  "by_label": {
-  "Some movement": {
-   "cards": 3855,
-   "median_change_pct": -3.7,
-   "cheaper5_pct": 45,
-   "dearer5_pct": 17,
-   "best_wait_saving_pct": 7.1,
-   "vs_all_pct": 0.4,
+  "Reasonable time to buy": {
+   "cards": 1971,
+   "median_change_pct": -1.8,
+   "cheaper5_pct": 23,
+   "dearer5_pct": 7,
+   "best_wait_saving_pct": 2.7,
+   "vs_all_pct": -0.1,
    "vs_all_90pct_interval": [
-    -0.1,
-    1.0
+    -0.4,
+    0.4
+   ]
+  },
+  "Some movement": {
+   "cards": 4317,
+   "median_change_pct": -1.8,
+   "cheaper5_pct": 30,
+   "dearer5_pct": 13,
+   "best_wait_saving_pct": 3.7,
+   "vs_all_pct": -0.1,
+   "vs_all_90pct_interval": [
+    -0.3,
+    0.2
    ]
   },
   "Stable price": {
-   "cards": 4080,
-   "median_change_pct": -2.2,
-   "cheaper5_pct": 34,
-   "dearer5_pct": 12,
-   "best_wait_saving_pct": 3.9,
-   "vs_all_pct": 1.9,
+   "cards": 3667,
+   "median_change_pct": -0.4,
+   "cheaper5_pct": 15,
+   "dearer5_pct": 8,
+   "best_wait_saving_pct": 1.4,
+   "vs_all_pct": 1.3,
    "vs_all_90pct_interval": [
-    1.2,
-    2.7
+    0.8,
+    1.6
    ]
   },
   "Volatile": {
-   "cards": 2950,
-   "median_change_pct": -5.5,
-   "cheaper5_pct": 52,
-   "dearer5_pct": 19,
-   "best_wait_saving_pct": 10.6,
-   "vs_all_pct": -1.4,
+   "cards": 3327,
+   "median_change_pct": -2.4,
+   "cheaper5_pct": 38,
+   "dearer5_pct": 18,
+   "best_wait_saving_pct": 5.9,
+   "vs_all_pct": -0.7,
    "vs_all_90pct_interval": [
-    -2.1,
-    -0.5
+    -1.2,
+    -0.2
    ]
   },
   "Wait, price spiking": {
-   "cards": 1163,
-   "median_change_pct": -8.5,
-   "cheaper5_pct": 59,
+   "cards": 1577,
+   "median_change_pct": -3.9,
+   "cheaper5_pct": 47,
    "dearer5_pct": 21,
-   "best_wait_saving_pct": 14.8,
-   "vs_all_pct": -4.4,
+   "best_wait_saving_pct": 8.4,
+   "vs_all_pct": -2.2,
    "vs_all_90pct_interval": [
-    -7.0,
-    -1.0
+    -4.2,
+    -0.2
    ]
   },
   "Wait, still falling": {
-   "cards": 4142,
-   "median_change_pct": -5.4,
-   "cheaper5_pct": 51,
+   "cards": 5375,
+   "median_change_pct": -2.2,
+   "cheaper5_pct": 37,
    "dearer5_pct": 21,
-   "best_wait_saving_pct": 10.8,
-   "vs_all_pct": -1.3,
+   "best_wait_saving_pct": 5.7,
+   "vs_all_pct": -0.5,
    "vs_all_90pct_interval": [
-    -2.7,
-    0.3
+    -1.5,
+    0.4
    ]
   },
   "Wait, too new": {
-   "cards": 270,
-   "median_change_pct": -17.6,
-   "cheaper5_pct": 82,
-   "dearer5_pct": 5,
-   "best_wait_saving_pct": 23.5,
-   "vs_all_pct": -13.5,
+   "cards": 407,
+   "median_change_pct": -8.5,
+   "cheaper5_pct": 62,
+   "dearer5_pct": 16,
+   "best_wait_saving_pct": 13.1,
+   "vs_all_pct": -6.8,
    "vs_all_90pct_interval": [
-    -31.8,
-    -6.8
+    -13.3,
+    0.5
    ]
   }
  },
  "by_date": {
-  "2026-10-13": {
-   "all": -3.6,
-   "stable": -1.4
+  "2026-10-21": {
+   "all": -1.0,
+   "buy": -1.5,
+   "buy_n": 444
   },
-  "2026-10-06": {
-   "all": -3.8,
-   "stable": -2.2
+  "2026-10-14": {
+   "all": -1.1,
+   "buy": -1.2,
+   "buy_n": 356
   },
-  "2026-09-29": {
-   "all": -4.2,
-   "stable": -2.7
+  "2026-10-07": {
+   "all": -2.0,
+   "buy": -2.0,
+   "buy_n": 369
   },
-  "2026-09-22": {
-   "all": -4.7,
-   "stable": -2.8
+  "2026-09-30": {
+   "all": -2.3,
+   "buy": -2.5,
+   "buy_n": 400
+  },
+  "2026-09-23": {
+   "all": -2.0,
+   "buy": -1.8,
+   "buy_n": 402
   }
  }
 }
