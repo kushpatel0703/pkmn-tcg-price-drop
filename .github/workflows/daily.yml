@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ["tracker/**", "config.json", ".github/workflows/daily.yml"]
+    paths: ["tracker/**", "config.json", "data/dex.json", ".github/workflows/daily.yml"]
 
 permissions:
   contents: write   # commit the day's data

@@ -38,7 +38,8 @@ from array import array
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import buywait  # noqa: E402
+import buywait
+import dex  # noqa: E402
 import nearmint  # noqa: E402
 from buywait import _median as median  # noqa: E402
 
@@ -497,12 +498,25 @@ def analyse(cfg, cards, set_of, days, groups, sealed_by_set=None):
             return "pattern"
         return "bulk" if price < min_price else "chase" if price >= cfg.get("chase_min", 20) else "mid"
 
+    abbr = {}
+    try:
+        abbr = {s["name"]: s["abbr"] for s in json.loads((ROOT / "report" / "all_sets.json").read_text())}
+    except (OSError, ValueError, KeyError):
+        pass
+    coll = dex.Collection(ROOT / "data" / "dex.json", groups, abbr)
+
+    def owned(pid, sub):
+        name = set_of.get(str(pid))
+        return coll.ok and coll.owns(name, cards[str(pid)], sub)
+
     rows = []
     for k in keep:
         d = eng.describe(k, t)
         if not d:
             continue
         pid, sub = k
+        if owned(pid, sub):            # never show cards you already own
+            continue
         c = cards[str(pid)]
         a = matrix[k]
         lo_i = bisect.bisect_left(ords, ords[t] - 364)
@@ -519,7 +533,8 @@ def analyse(cfg, cards, set_of, days, groups, sealed_by_set=None):
             "chg4w": None if c28 is None else round(c28 * 100, 1),
             "low": round(low[1], 2), "low_on": dt.date.fromordinal(low[0]).isoformat(),
             "high": round(high[1], 2), "high_on": dt.date.fromordinal(high[0]).isoformat(),
-            "hist_days": len(win), "spark_from": spark_from, "spark": pts})
+            "hist_days": len(win), "spark_from": spark_from, "spark": pts,
+            "need": coll.mine(card_set[k])})
     rows.sort(key=lambda r: (r["state"] != "Buy", -r["price"]))
     state_of = {(r["id"], r["printing"]): r for r in rows}
 
@@ -527,11 +542,6 @@ def analyse(cfg, cards, set_of, days, groups, sealed_by_set=None):
     price_of = {}
     for (pid, _sub), (m, _) in cur.items():
         price_of.setdefault(str(pid), m)
-    abbr = {}
-    try:
-        abbr = {s["name"]: s["abbr"] for s in json.loads((ROOT / "report" / "all_sets.json").read_text())}
-    except (OSError, ValueError, KeyError):
-        pass
     sets = []
     for g in groups:
         name = g["name"]
@@ -544,7 +554,7 @@ def analyse(cfg, cards, set_of, days, groups, sealed_by_set=None):
         grp["bulk"]["floor"] = 0.0
         bulk_list, seen = [], set()
         for (pid, sub), (m, _) in cur.items():
-            if set_of.get(str(pid)) != name:
+            if set_of.get(str(pid)) != name or owned(pid, sub):
                 continue
             cd = cards[str(pid)]
             gname = group_of(cd["name"], m)
@@ -558,9 +568,9 @@ def analyse(cfg, cards, set_of, days, groups, sealed_by_set=None):
                 gr[key + "_total"] += m
             if gname == "bulk":
                 gr["floor"] += max(m, 0.40)       # TCGplayer Direct's per-card minimum
-                if pid not in seen:
-                    seen.add(pid)
-                    bulk_list.append([cd["name"], cd["num"]])
+                if (pid, sub) not in seen:
+                    seen.add((pid, sub))
+                    bulk_list.append([cd["name"], cd["num"], sub])
         for gr in grp.values():
             for x in list(gr):
                 if isinstance(gr[x], float):
@@ -570,7 +580,8 @@ def analyse(cfg, cards, set_of, days, groups, sealed_by_set=None):
                      "abbr": abbr.get(name, ""), **st,
                      "changed": None if not was else ("stopped falling" if was["falling"] and not st["falling"]
                                                       else "started falling" if st["falling"] and not was["falling"] else None),
-                     "groups": grp, "box": box, "bulk_list": bulk_list})
+                     "groups": grp, "box": box, "bulk_list": bulk_list,
+                     "mine": coll.mine(name), "dex": coll.sets.get(name)})
 
     # ---- evidence and market direction
     ev = eng.evidence(ROOT / "data" / "buywait_evidence.json", cfg.get("buywait_rule_since", today))
@@ -593,6 +604,7 @@ def analyse(cfg, cards, set_of, days, groups, sealed_by_set=None):
         "counts": {"cards": len(rows), "buy": len(buy), "wait": len(rows) - len(buy),
                    "buy_total": round(sum(r["price"] for r in buy), 2), "newly_buy": sum(r["newly_buy"] for r in rows)},
         "evidence": ev,
+        "dex": {"fetched": coll.fetched, "sets": len(coll.sets), "unmatched": coll.unmatched} if coll.ok else None,
         "caveats": CAVEATS,
         "sets": sets,
         "cards": rows,

@@ -91,6 +91,7 @@
     <button class="tab" type="button" role="tab" id="tab-cards">Cards<small id="tabcards-n"></small></button>
   </div>
   <div class="controls">
+    <select id="needf" class="full" aria-label="Which sets"></select>
     <details id="setbox" class="full">
       <summary id="setsum">My sets: all</summary>
       <div class="setactions"><button class="small" type="button" id="setall">Select all</button><button class="small" type="button" id="setnone">Clear all</button></div>
@@ -119,7 +120,7 @@ const GROUPS = { chase: "Chase", mid: "Mid", pattern: "Ball patterns", bulk: "Bu
 const store = { get(k, d) { try { const v = localStorage.getItem("pkmn-" + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
                 set(k, v) { try { localStorage.setItem("pkmn-" + k, JSON.stringify(v)); } catch (e) {} } };
 let view = store.get("view", "sets"), shown = 50, open = null, focusSet = null;
-const SORTS = { sets: [["buy", "Most to buy now"], ["new", "Newest set"], ["name", "Name"]],
+const SORTS = { sets: [["buy", "Most to buy now"], ["left", "Most left to finish ($)"], ["new", "Newest set"], ["name", "Name"]],
                 cards: [["auto", "Buy first, priciest first"], ["setnum", "Set, then card number"], ["dear", "Most expensive"], ["cheap", "Cheapest"]] };
 
 function fill(sel, opts, val) { sel.textContent = ""; opts.forEach(([v, t]) => { const o = document.createElement("option"); o.value = v; o.textContent = t; sel.appendChild(o); }); if (val != null) sel.value = val; }
@@ -134,7 +135,11 @@ function init() {
   const age = Math.floor((Date.now() - new Date(R.date + "T23:59:00Z").getTime()) / 864e5);
   if (age >= 2) $("stale").appendChild(el("div", "stale", "These prices are " + age + " days old: the daily update has stopped. Check the GitHub repo's Actions tab or open issues."));
   evidence();
-  fill($("statef"), [["", "Buy first and can wait"], ["Buy", "Buy first only"], ["Wait", "Can wait only"]], store.get("statef", ""));
+  const D = R.dex;
+  fill($("needf"), D ? [["need", "Cards I need: my " + D.sets + " Dex sets"], ["", "All sets"]] : [["", "All sets"]], D ? store.get("needf", "need") : "");
+  $("needf").classList.toggle("hide", !D);
+  $("needf").addEventListener("input", () => { store.set("needf", $("needf").value); shown = 50; focusSet = null; draw(); });
+  fill($("statef"), [["", "Buy first and can wait"], ["Buy", "Good value now (buy first)"], ["Wait", "Can wait only"]], store.get("statef", ""));
   fill($("groupf"), [["", "All cards $1+"], ["chase", "Chase ($" + (R.chase_min || 20) + "+)"], ["mid", "Mid ($1–" + (R.chase_min || 20) + ")"], ["pattern", "Ball patterns"]], store.get("groupf", ""));
   ["statef", "groupf"].forEach((id) => $(id).addEventListener("input", () => { store.set(id, $(id).value); shown = 50; draw(); }));
   $("q").addEventListener("input", () => { shown = 50; draw(); });
@@ -144,6 +149,8 @@ function init() {
   buildSets();
   const f = $("foot");
   (R.caveats || []).forEach((c) => f.appendChild(el("p", null, c)));
+  if (R.dex) f.appendChild(el("p", null, "Cards you own in Dex (@kushp1, list from " + fmtDate(R.dex.fetched, true) + ") are hidden everywhere: lists, totals and copy buttons." +
+    (R.dex.unmatched && R.dex.unmatched.length ? " Not matched to TCGplayer yet: " + R.dex.unmatched.join(", ") + "." : "")));
   f.appendChild(el("p", null, "Prices from TCGplayer via tcgcsv.com, updated daily. Near Mint 1-year ranges from JustTCG (" + (R.nm_cards || 0).toLocaleString() + " cards so far). Price history on file since " + fmtDate(R.history_from, true) + "."));
   draw();
 }
@@ -174,7 +181,9 @@ function evidence() {
 
 // ---- my sets (saved on this device when the browser allows it)
 let ALL = [], picked = null;
-function isPicked(n) { return !picked || picked.has(n); }
+function needOnly() { return !!R.dex && $("needf").value === "need"; }
+function isPicked(n) { if (needOnly()) return mineSet.has(n); return !picked || picked.has(n); }
+let mineSet = new Set();
 function savePicked() { store.set("sets", picked ? [...picked] : null); }
 function setPicked(names, on) {
   if (!picked) picked = new Set(ALL.map((s) => s.name));
@@ -184,6 +193,7 @@ function setPicked(names, on) {
 }
 function buildSets() {
   ALL = R.sets.slice();
+  mineSet = new Set(ALL.filter((s) => s.mine).map((s) => s.name));
   const saved = store.get("sets", null);
   if (Array.isArray(saved)) { const known = saved.filter((n) => ALL.some((s) => s.name === n)); if (known.length) picked = new Set(known); }
   const list = $("setlist"); list.textContent = "";
@@ -227,8 +237,9 @@ function setRows() {
   const w = words();
   const rows = R.sets.filter((s) => isPicked(s.name) && (!w.length || w.every((x) => s.name.toLowerCase().includes(x))));
   const buyTotal = (s) => ["mid", "chase", "pattern"].reduce((t, g) => t + s.groups[g].buy_total, 0);
+  const left = (s) => ["mid", "chase", "pattern", "bulk"].reduce((t, g) => t + s.groups[g].total, 0);
   const s = $("sort").value || "buy";
-  const by = { buy: (a, b) => buyTotal(b) - buyTotal(a) || b.published.localeCompare(a.published),
+  const by = { buy: (a, b) => buyTotal(b) - buyTotal(a) || b.published.localeCompare(a.published), left: (a, b) => left(b) - left(a),
                new: (a, b) => b.published.localeCompare(a.published), name: (a, b) => a.name.localeCompare(b.name) }[s];
   return rows.sort(by);
 }
@@ -240,6 +251,7 @@ function draw() {
   fill($("sort"), SORTS[view], store.get("sort-" + view, SORTS[view][0][0]));
   if (!$("sort").value) $("sort").value = SORTS[view][0][0];
   ["statef", "groupf"].forEach((id) => $(id).classList.toggle("hide", view !== "cards"));
+  $("setbox").classList.toggle("hide", needOnly());
   const cr = cardRows(), sr = setRows();
   $("tabsets-n").textContent = sr.length + " sets";
   const buyN = cr.filter((r) => r.state === "Buy").length;
@@ -255,8 +267,15 @@ function draw() {
 }
 
 function drawSets(rows, list) {
-  const nBuy = rows.reduce((t, s) => t + ["mid", "chase", "pattern"].reduce((u, g) => u + s.groups[g].buy_n, 0), 0);
-  $("summary").textContent = nBuy.toLocaleString() + " cards across these sets are buy-first today. Bulk (under $1) is fine to buy any time, in one order.";
+  const sum = (k) => rows.reduce((t, s) => t + ["mid", "chase", "pattern"].reduce((u, g) => u + s.groups[g][k], 0), 0);
+  const nBuy = sum("buy_n");
+  if (needOnly()) {
+    const n = rows.reduce((t, s) => t + ["mid", "chase", "pattern", "bulk"].reduce((u, g) => u + s.groups[g].n, 0), 0);
+    const bulkN = rows.reduce((t, s) => t + s.groups.bulk.n, 0), bulkT = rows.reduce((t, s) => t + s.groups.bulk.total, 0);
+    $("summary").textContent = "Your " + rows.length + " Dex sets: " + n.toLocaleString() + " printings to go, about " + money0(sum("buy_total") + sum("wait_total") + bulkT) + ". " +
+      (nBuy ? nBuy + " are good value now (buy first, " + money0(sum("buy_total")) + "). " : "None of your $1+ cards are buy-first today: their sets are falling, so they can wait. ") +
+      "Bulk: " + bulkN + " printings, about " + money0(bulkT) + ", fine to buy any time.";
+  } else $("summary").textContent = nBuy.toLocaleString() + " cards across these sets are buy-first today. Bulk (under $1) is fine to buy any time, in one order.";
   if (!rows.length) { list.appendChild(el("div", "empty", "No sets selected.")); return; }
   rows.forEach((s) => list.appendChild(setItem(s)));
 }
@@ -274,6 +293,7 @@ function setItem(s) {
   const [cls, txt] = setBadge(s);
   head.appendChild(el("span", "badge " + cls, cls === "wait" ? "CAN WAIT" : "OK"));
   const mid = el("div"); mid.appendChild(el("div", "name", s.name)); mid.appendChild(el("div", "meta", (s.published || "").slice(0, 4) + " · " + txt + (s.changed ? " · " + s.changed + " today" : "")));
+  if (s.dex && s.dex.dex_total) mid.appendChild(el("div", "meta", "Dex: " + s.dex.dex_owned + " of " + s.dex.dex_total + " cards (" + Math.round(100 * s.dex.dex_owned / s.dex.dex_total) + "%) · showing only printings you don't own"));
   head.appendChild(mid);
   const buyN = g.mid.buy_n + g.chase.buy_n + g.pattern.buy_n, buyT = g.mid.buy_total + g.chase.buy_total + g.pattern.buy_total;
   const waitN = g.mid.wait_n + g.chase.wait_n + g.pattern.wait_n, waitT = g.mid.wait_total + g.chase.wait_total + g.pattern.wait_total;
@@ -316,15 +336,27 @@ function setDetail(s) {
   show.addEventListener("click", () => { focusSet = s.name; view = "cards"; store.set("view", view); shown = 50; open = null; draw(); });
   btns.appendChild(show);
   const buyCards = R.cards.filter((r) => r.set === s.name && r.state === "Buy");
-  if (buyCards.length) btns.appendChild(copyButton("Copy Buy list (" + buyCards.length + ")", () => massEntry(buyCards.map((r) => [r.name, r.num]), s.abbr), d));
-  if (s.bulk_list && s.bulk_list.length) btns.appendChild(copyButton("Copy bulk list (" + s.bulk_list.length + ")", () => massEntry(s.bulk_list, s.abbr), d));
+  copyByPrinting("Copy buy-first list", buyCards.map((r) => [r.name, r.num, r.printing]), s.abbr, d, btns);
+  copyByPrinting("Copy bulk list", s.bulk_list || [], s.abbr, d, btns);
   d.appendChild(btns);
   return d;
 }
 
+// TCGplayer Mass Entry can't take the printing on each line, so give one list per printing:
+// paste one, pick that printing (and Near Mint), add to cart, then the next.
+const PRINT_LABEL = { "Normal": "normal", "Reverse Holofoil": "reverse holo", "Holofoil": "holo" };
+function copyByPrinting(label, items, abbr, host, btns) {
+  const by = {};
+  items.forEach((it) => { const p = it[2] || ""; (by[p] = by[p] || []).push(it); });
+  Object.keys(by).sort().forEach((p) => {
+    const part = Object.keys(by).length > 1 || p ? " · " + (PRINT_LABEL[p] || p.toLowerCase() || "any") : "";
+    btns.appendChild(copyButton(label + part + " (" + by[p].length + ")", () => massEntry(by[p], abbr), host));
+  });
+}
+
 function massEntry(pairs, abbr) {
   const seen = new Set(), lines = [];
-  pairs.forEach(([name, num]) => {
+  pairs.forEach(([name, num, printing]) => {
     const n = String(name).replace(/\s+-\s+[A-Za-z0-9/]+$/, "");
     const no = String(num || "").split("/")[0];
     const line = "1 " + n + (abbr ? " [" + abbr + "]" : "") + (no ? " " + no : "");
@@ -339,7 +371,7 @@ function copyButton(label, text, host) {
     const t = text();
     const show = () => {
       const ta = el("textarea", "copy"); ta.value = t; ta.readOnly = true; host.appendChild(ta);
-      host.appendChild(el("p", "muted", "Copy this list, paste it into TCGplayer's Mass Entry, choose Near Mint and the printing there, then let the cart optimizer cut shipping."));
+      host.appendChild(el("p", "muted", "Copy this list, paste it into TCGplayer's Mass Entry, choose Near Mint and this list's printing there, then let the cart optimizer cut shipping."));
       try { ta.select(); } catch (e) {}
     };
     try {
@@ -352,8 +384,10 @@ function copyButton(label, text, host) {
 function drawCards(rows, list) {
   const buy = rows.filter((r) => r.state === "Buy"), newly = rows.filter((r) => r.newly_buy).length;
   $("summary").textContent = buy.length.toLocaleString() + " buy first (" + money0(buy.reduce((t, r) => t + r.price, 0)) + ") · " + (rows.length - buy.length).toLocaleString() + " can wait" +
-    (newly ? " · " + newly + " turned buy-first today" : "") + ". Cards under $1 are in each set's bulk list.";
-  if (!rows.length) { list.appendChild(el("div", "empty", focusSet ? "No cards worth $1+ in this set yet." : "Nothing here with these filters.")); return; }
+    (newly ? " · " + newly + " turned buy-first today" : "") + (needOnly() ? ", all from your Dex sets" : "") + ". Cards under $1 are in each set's bulk list.";
+  if (!rows.length) { list.appendChild(el("div", "empty", focusSet ? "No cards worth $1+ in this set yet."
+    : needOnly() && $("statef").value === "Buy" ? "None of the cards you need are good value right now: their sets are still falling, so they can wait. Check back as sets stop falling (the morning summary tells you)."
+    : "Nothing here with these filters.")); return; }
   rows.slice(0, shown).forEach((r) => list.appendChild(cardItem(r)));
   if (rows.length > shown) { const b = el("button", "more", "Show more (" + (rows.length - shown) + " left)"); b.type = "button";
     b.addEventListener("click", () => { shown += 50; draw(); }); list.appendChild(b); }
