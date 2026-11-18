@@ -24,7 +24,14 @@
   details.evidence { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 9px 12px; margin-bottom: 10px; font-size: 13.5px; }
   details.evidence summary { cursor: pointer; }
   details.evidence p { margin: 6px 0 0; color: var(--muted); }
-  .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
+  .tabs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 8px; }
+  #budgetbox { display: grid; grid-template-columns: 1fr; gap: 6px; }
+  #budgetbox .amt { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+  #budgetbox input[type="number"] { flex: 1; min-height: 44px; padding: 8px 10px; border-radius: 9px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font: inherit; font-size: 16px; min-width: 0; }
+  #budgetbox label.opt { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; color: var(--muted); }
+  .plan h3 { font-size: 15px; margin: 14px 0 4px; }
+  .plan .line { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+  .plan .line span:last-child { font-variant-numeric: tabular-nums; white-space: nowrap; }
   .tab { min-height: 46px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; cursor: pointer; color: var(--ink); font: inherit; font-weight: 600; }
   .tab small { display: block; font-weight: 400; font-size: 12px; color: var(--muted); }
   .tab[aria-selected="true"] { border-color: var(--buy); background: var(--buy-soft); }
@@ -89,6 +96,7 @@
   <div class="tabs" role="tablist">
     <button class="tab" type="button" role="tab" id="tab-sets">Sets<small id="tabsets-n"></small></button>
     <button class="tab" type="button" role="tab" id="tab-cards">Cards<small id="tabcards-n"></small></button>
+    <button class="tab" type="button" role="tab" id="tab-budget">Budget<small id="tabbudget-n"></small></button>
   </div>
   <div class="controls">
     <select id="needf" class="full" aria-label="Which sets"></select>
@@ -101,6 +109,10 @@
     <select id="statef" aria-label="Show"></select>
     <select id="groupf" aria-label="Card group"></select>
     <select id="sort" class="full" aria-label="Sort"></select>
+    <div id="budgetbox" class="full hide">
+      <div class="amt"><span>Budget $</span><input id="budget" type="number" inputmode="decimal" min="0" step="5" placeholder="e.g. 150" aria-label="Budget in dollars"></div>
+      <label class="opt"><input id="budgetlow" type="checkbox"><span>Also spend leftover money on can-wait cards within 10% of their 1-year low</span></label>
+    </div>
   </div>
   <div id="focus"></div>
   <div class="summary" id="summary"></div>
@@ -146,6 +158,11 @@ function init() {
   $("sort").addEventListener("input", () => { store.set("sort-" + view, $("sort").value); shown = 50; draw(); });
   $("tab-sets").addEventListener("click", () => { view = "sets"; store.set("view", view); shown = 50; open = null; draw(); });
   $("tab-cards").addEventListener("click", () => { view = "cards"; store.set("view", view); shown = 50; open = null; draw(); });
+  $("tab-budget").addEventListener("click", () => { view = "budget"; store.set("view", view); open = null; draw(); });
+  $("budget").value = store.get("budget", "") || "";
+  $("budgetlow").checked = !!store.get("budgetlow", false);
+  $("budget").addEventListener("input", () => { store.set("budget", $("budget").value); draw(); });
+  $("budgetlow").addEventListener("change", () => { store.set("budgetlow", $("budgetlow").checked); draw(); });
   buildSets();
   const f = $("foot");
   (R.caveats || []).forEach((c) => f.appendChild(el("p", null, c)));
@@ -248,8 +265,11 @@ function setRows() {
 function draw() {
   $("tab-sets").setAttribute("aria-selected", String(view === "sets"));
   $("tab-cards").setAttribute("aria-selected", String(view === "cards"));
-  fill($("sort"), SORTS[view], store.get("sort-" + view, SORTS[view][0][0]));
-  if (!$("sort").value) $("sort").value = SORTS[view][0][0];
+  $("tab-budget").setAttribute("aria-selected", String(view === "budget"));
+  const bv = view === "budget";
+  if (!bv) { fill($("sort"), SORTS[view], store.get("sort-" + view, SORTS[view][0][0])); if (!$("sort").value) $("sort").value = SORTS[view][0][0]; }
+  ["sort", "q"].forEach((id) => $(id).classList.toggle("hide", bv));
+  $("budgetbox").classList.toggle("hide", !bv);
   ["statef", "groupf"].forEach((id) => $(id).classList.toggle("hide", view !== "cards"));
   $("setbox").classList.toggle("hide", needOnly());
   const cr = cardRows(), sr = setRows();
@@ -263,7 +283,9 @@ function draw() {
     x.addEventListener("click", () => { focusSet = null; shown = 50; draw(); }); chip.appendChild(x); fc.appendChild(chip);
   }
   const list = $("list"); list.textContent = "";
-  if (view === "sets") drawSets(sr, list); else drawCards(cr, list);
+  const bp = budgetPlan();
+  $("tabbudget-n").textContent = bp ? money0(bp.spent) + " plan" : "set an amount";
+  if (view === "sets") drawSets(sr, list); else if (view === "cards") drawCards(cr, list); else drawBudget(bp, list);
 }
 
 function drawSets(rows, list) {
@@ -342,6 +364,68 @@ function setDetail(s) {
   return d;
 }
 
+// ---- budget mode: fill a budget from the cards you need, best first
+// 1) buy-first cards (they have kept rising), most expensive first, each only if it still fits;
+// 2) whole-set bulk lists (one order per set keeps shipping down), sets already in the plan first,
+//    then the cheapest; priced at TCGplayer Direct's $0.40-per-card minimum to be safe;
+// 3) optionally, can-wait cards within 10% of their 1-year low, closest to the low first.
+function budgetPlan() {
+  const B = parseFloat($("budget").value);
+  if (!(B > 0)) return null;
+  const inScope = (set) => isPicked(set);
+  const abbrOf = {}; R.sets.forEach((s) => { abbrOf[s.name] = s.abbr; });
+  let left = B; const cards = [], bulk = [], lows = [], skipped = [];
+  R.cards.filter((r) => r.state === "Buy" && inScope(r.set)).sort((a, b) => b.price - a.price)
+    .forEach((r) => { if (r.price <= left) { cards.push(r); left -= r.price; } else skipped.push(r); });
+  const inPlan = new Set(cards.map((r) => r.set));
+  R.sets.filter((s) => inScope(s.name) && s.groups.bulk.n && s.bulk_list && s.bulk_list.length)
+    .sort((a, b) => (inPlan.has(b.name) - inPlan.has(a.name)) || a.groups.bulk.floor - b.groups.bulk.floor)
+    .forEach((s) => { const c = Math.max(s.groups.bulk.floor, s.groups.bulk.total); if (c <= left) { bulk.push([s, c]); left -= c; } });
+  if ($("budgetlow").checked) {
+    R.cards.filter((r) => r.state !== "Buy" && inScope(r.set) && r.hist_days >= 60 && r.low > 0 && r.price <= r.low * 1.10)
+      .sort((a, b) => a.price / a.low - b.price / b.low || b.price - a.price)
+      .forEach((r) => { if (r.price <= left) { lows.push(r); left -= r.price; } });
+  }
+  const items = [].concat(cards.map((r) => [r.name, r.num, r.printing, abbrOf[r.set]]),
+                          lows.map((r) => [r.name, r.num, r.printing, abbrOf[r.set]]),
+                          ...bulk.map(([s]) => s.bulk_list.map((b) => [b[0], b[1], b[2], s.abbr])));
+  return { budget: B, spent: B - left, left, cards, bulk, lows, skipped, items,
+           buyAvail: R.cards.filter((r) => r.state === "Buy" && inScope(r.set)).length };
+}
+
+function drawBudget(bp, list) {
+  const scope = needOnly() ? "your Dex sets" : picked ? "your selected sets" : "all sets";
+  if (!bp) { $("summary").textContent = "Enter what you want to spend. The plan uses cards you need in " + scope + ": buy-first cards first, then whole-set bulk lists."; return; }
+  const sum = (a) => a.reduce((t, r) => t + r.price, 0);
+  const bulkT = bp.bulk.reduce((t, [, c]) => t + c, 0);
+  $("summary").textContent = "Plan: " + money(bp.spent) + " of " + money0(bp.budget) + " at market prices, before shipping and tax. " + money(bp.left) + " left over.";
+  const d = el("div", "plan");
+  if (!bp.buyAvail) d.appendChild(el("p", "muted", "None of the cards you need in " + scope + " are buy-first today (their sets are still falling), so the plan starts with bulk, which is fine to buy any time."));
+  if (bp.cards.length) {
+    d.appendChild(el("h3", null, "Buy first: " + bp.cards.length + " cards · " + money(sum(bp.cards))));
+    bp.cards.forEach((r) => { const l = el("div", "line"); l.appendChild(el("span", null, r.name + " · " + r.set.replace(/^[^:]*:\s*/, "") + " · " + r.printing)); l.appendChild(el("span", null, money(r.price))); d.appendChild(l); });
+  }
+  if (bp.lows.length) {
+    d.appendChild(el("h3", null, "Can wait, but within 10% of their 1-year low: " + bp.lows.length + " cards · " + money(sum(bp.lows))));
+    bp.lows.forEach((r) => { const l = el("div", "line"); l.appendChild(el("span", null, r.name + " · " + r.set.replace(/^[^:]*:\s*/, "") + " · " + r.printing + " (low " + money(r.low) + ")")); l.appendChild(el("span", null, money(r.price))); d.appendChild(l); });
+  }
+  if (bp.bulk.length) {
+    d.appendChild(el("h3", null, "Bulk, whole sets: " + bp.bulk.reduce((t, [s]) => t + s.bulk_list.length, 0) + " printings · up to " + money(bulkT)));
+    bp.bulk.forEach(([s, c]) => { const l = el("div", "line"); l.appendChild(el("span", null, s.name.replace(/^[^:]*:\s*/, "") + " · " + s.bulk_list.length + " printings (market " + money0(s.groups.bulk.total) + ")")); l.appendChild(el("span", null, "up to " + money(c))); d.appendChild(l); });
+    d.appendChild(el("p", "muted", "Bulk is budgeted at TCGplayer Direct's $0.40-per-card minimum, so it usually comes in under this."));
+  }
+  if (!bp.items.length) d.appendChild(el("div", "empty", "Nothing fits in " + money0(bp.budget) + " yet. The cheapest set's bulk is " +
+    money0(Math.min(...R.sets.filter((s) => isPicked(s.name) && s.groups.bulk.n).map((s) => s.groups.bulk.floor).concat([Infinity]))) + "."));
+  if (bp.skipped.length) d.appendChild(el("p", "muted", "Didn't fit: " + bp.skipped.length + " buy-first card" + (bp.skipped.length > 1 ? "s" : "") + ", the cheapest " + money(Math.min(...bp.skipped.map((r) => r.price))) + "."));
+  if (bp.items.length) {
+    const btns = el("div", "btnrow");
+    copyByPrinting("Copy plan", bp.items, null, d, btns);
+    d.appendChild(btns);
+    d.appendChild(el("p", "muted", "One list per printing: paste it into TCGplayer Mass Entry, pick that printing and Near Mint, add to cart, then the next list. Let the cart optimizer cut shipping."));
+  }
+  list.appendChild(d);
+}
+
 // TCGplayer Mass Entry can't take the printing on each line, so give one list per printing:
 // paste one, pick that printing (and Near Mint), add to cart, then the next.
 const PRINT_LABEL = { "Normal": "normal", "Reverse Holofoil": "reverse holo", "Holofoil": "holo" };
@@ -356,10 +440,11 @@ function copyByPrinting(label, items, abbr, host, btns) {
 
 function massEntry(pairs, abbr) {
   const seen = new Set(), lines = [];
-  pairs.forEach(([name, num, printing]) => {
+  pairs.forEach(([name, num, printing, ab]) => {
     const n = String(name).replace(/\s+-\s+[A-Za-z0-9/]+$/, "");
     const no = String(num || "").split("/")[0];
-    const line = "1 " + n + (abbr ? " [" + abbr + "]" : "") + (no ? " " + no : "");
+    const a = ab || abbr;
+    const line = "1 " + n + (a ? " [" + a + "]" : "") + (no ? " " + no : "");
     if (!seen.has(line)) { seen.add(line); lines.push(line); }
   });
   return lines.join("\n");

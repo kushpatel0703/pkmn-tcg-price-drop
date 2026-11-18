@@ -46,6 +46,7 @@ The **track record** at the top of the dashboard is recomputed every run from th
 
 - Cards you own are hidden everywhere: card lists, set totals, copy lists.
 - **Cards I need** (the default when the file exists) shows only your Dex sets, with Dex progress and what's left to buy. **Good value now** is the buy-first filter; together they answer "what should I buy today".
+- **Budget** tab: enter an amount and it builds an order from the cards you need: buy-first cards first (most expensive first, each only if it still fits), then whole-set bulk lists (sets already in the order first, then the cheapest; budgeted at TCGplayer Direct's $0.40-per-card minimum), and optionally can-wait cards within 10% of their 1-year low. Prices are market prices before shipping and tax.
 - Copy buttons give one TCGplayer Mass Entry list per printing (normal / reverse holo / holo), since Mass Entry can't take the printing per line.
 - Ball patterns and other printings Dex doesn't track count as not owned.
 
