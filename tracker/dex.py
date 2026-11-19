@@ -19,7 +19,7 @@ def _norm(name):
 def card_number(num):
     """TCGplayer '022/182' or 'TG04/TG30' -> Dex '22' / 'TG04'."""
     n = (num or "").split("/")[0].strip().upper()
-    return n.lstrip("0") or "0" if n.isdigit() else n
+    return (n.lstrip("0") or "0") if n.isdigit() else n
 
 
 class Collection:

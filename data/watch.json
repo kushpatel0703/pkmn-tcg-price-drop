@@ -1,0 +1,4 @@
+{
+ "_how": "Price targets. Each card: set (TCGplayer set name as on the dashboard), num (card number), printing (Normal / Reverse Holofoil / Holofoil), target (dollars, or null = alert at its 1-year low), note. The morning summary says when a price reaches its target.",
+ "cards": []
+}

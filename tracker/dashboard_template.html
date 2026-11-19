@@ -63,6 +63,9 @@
   table.periods th, table.periods td { padding: 4px 3px; border-bottom: 1px solid var(--line); text-align: right; }
   table.periods th:first-child, table.periods td:first-child { text-align: left; }
   .market { font-size: 13.5px; margin-bottom: 8px; }
+  .alerts { background: var(--buy-soft); border: 1px solid var(--buy); border-radius: 10px; padding: 8px 10px; margin-bottom: 8px; font-size: 14px; }
+  .alerts b { display: block; margin-bottom: 2px; }
+  .lowtag { color: var(--buy); font-weight: 600; }
   .name { font-weight: 600; overflow-wrap: anywhere; }
   .meta { color: var(--muted); font-size: 13px; }
   .price { text-align: right; white-space: nowrap; font-weight: 650; font-variant-numeric: tabular-nums; font-size: 16px; }
@@ -92,6 +95,7 @@
   <div class="sub" id="sub"></div>
   <div id="stale"></div>
   <div class="market" id="market"></div>
+  <div id="alerts"></div>
   <details class="evidence" id="evidence"><summary id="evsum"></summary><div id="evmore"></div></details>
   <div class="tabs" role="tablist">
     <button class="tab" type="button" role="tab" id="tab-sets">Sets<small id="tabsets-n"></small></button>
@@ -133,7 +137,7 @@ const store = { get(k, d) { try { const v = localStorage.getItem("pkmn-" + k); r
                 set(k, v) { try { localStorage.setItem("pkmn-" + k, JSON.stringify(v)); } catch (e) {} } };
 let view = store.get("view", "sets"), shown = 50, open = null, focusSet = null;
 const SORTS = { sets: [["buy", "Most to buy now"], ["left", "Most left to finish ($)"], ["new", "Newest set"], ["name", "Name"]],
-                cards: [["auto", "Buy first, priciest first"], ["setnum", "Set, then card number"], ["dear", "Most expensive"], ["cheap", "Cheapest"]] };
+                cards: [["auto", "Buy first, priciest first"], ["low", "Closest to 1-year low"], ["setnum", "Set, then card number"], ["dear", "Most expensive"], ["cheap", "Cheapest"]] };
 
 function fill(sel, opts, val) { sel.textContent = ""; opts.forEach(([v, t]) => { const o = document.createElement("option"); o.value = v; o.textContent = t; sel.appendChild(o); }); if (val != null) sel.value = val; }
 
@@ -151,7 +155,8 @@ function init() {
   fill($("needf"), D ? [["need", "Cards I need: my " + D.sets + " Dex sets"], ["", "All sets"]] : [["", "All sets"]], D ? store.get("needf", "need") : "");
   $("needf").classList.toggle("hide", !D);
   $("needf").addEventListener("input", () => { store.set("needf", $("needf").value); shown = 50; focusSet = null; draw(); });
-  fill($("statef"), [["", "Buy first and can wait"], ["Buy", "Good value now (buy first)"], ["Wait", "Can wait only"]], store.get("statef", ""));
+  fill($("statef"), [["", "Buy first and can wait"], ["Buy", "Good value now (buy first)"], ["low", "Near 1-year low (within 10%)"], ["target", "My price targets"], ["Wait", "Can wait only"]], store.get("statef", ""));
+  alertsBox();
   fill($("groupf"), [["", "All cards $1+"], ["chase", "Chase ($" + (R.chase_min || 20) + "+)"], ["mid", "Mid ($1–" + (R.chase_min || 20) + ")"], ["pattern", "Ball patterns"]], store.get("groupf", ""));
   ["statef", "groupf"].forEach((id) => $(id).addEventListener("input", () => { store.set(id, $(id).value); shown = 50; draw(); }));
   $("q").addEventListener("input", () => { shown = 50; draw(); });
@@ -241,13 +246,15 @@ function syncSets() {
 function words() { return $("q").value.trim().toLowerCase().split(/\s+/).filter(Boolean); }
 function cardRows() {
   const w = words(), sf = $("statef").value, gf = $("groupf").value;
-  const rows = R.cards.filter((r) => (focusSet ? r.set === focusSet : isPicked(r.set)) && (!sf || r.state === sf) && (!gf || r.group === gf) &&
+  const okState = (r) => !sf || (sf === "low" ? r.above_low_pct != null && r.above_low_pct <= 10 : sf === "target" ? !!r.watch : r.state === sf);
+  const rows = R.cards.filter((r) => (focusSet ? r.set === focusSet : (sf === "target" || isPicked(r.set))) && okState(r) && (!gf || r.group === gf) &&
     (!w.length || w.every((x) => (r.name + " " + r.num + " #" + r.num + " " + r.set + " " + r.printing).toLowerCase().includes(x))));
   const s = $("sort").value || "auto";
   const flat = (r) => (r.hist_days >= 60 && r.high - r.low < 0.01 * r.high) ? 1 : 0;
   const by = { auto: (a, b) => (a.state !== "Buy") - (b.state !== "Buy") || flat(a) - flat(b) || b.price - a.price,
                setnum: (a, b) => a.set.localeCompare(b.set) || numKey(a.num) - numKey(b.num) || String(a.num).localeCompare(String(b.num)) || a.printing.localeCompare(b.printing),
-               dear: (a, b) => b.price - a.price, cheap: (a, b) => a.price - b.price }[s] || ((a, b) => 0);
+               dear: (a, b) => b.price - a.price, cheap: (a, b) => a.price - b.price,
+               low: (a, b) => (a.above_low_pct == null) - (b.above_low_pct == null) || a.above_low_pct - b.above_low_pct || b.price - a.price }[s] || ((a, b) => 0);
   return rows.sort(by);
 }
 function setRows() {
@@ -471,6 +478,7 @@ function drawCards(rows, list) {
   $("summary").textContent = buy.length.toLocaleString() + " buy first (" + money0(buy.reduce((t, r) => t + r.price, 0)) + ") · " + (rows.length - buy.length).toLocaleString() + " can wait" +
     (newly ? " · " + newly + " turned buy-first today" : "") + (needOnly() ? ", all from your Dex sets" : "") + ". Cards under $1 are in each set's bulk list.";
   if (!rows.length) { list.appendChild(el("div", "empty", focusSet ? "No cards worth $1+ in this set yet."
+    : $("statef").value === "target" ? "No price targets yet. Tell Claude something like \"Mewtwo ex from Destined Rivals at $250\" or \"Pikachu ex from Surging Sparks at its 1-year low\"."
     : needOnly() && $("statef").value === "Buy" ? "None of the cards you need are good value right now: their sets are still falling, so they can wait. Check back as sets stop falling (the morning summary tells you)."
     : "Nothing here with these filters.")); return; }
   rows.slice(0, shown).forEach((r) => list.appendChild(cardItem(r)));
@@ -487,12 +495,35 @@ function cardItem(r) {
   head.appendChild(el("div", "price", money(r.price)));
   const flat = r.hist_days >= 60 && r.high - r.low < 0.01 * r.high;
   head.appendChild(el("div", "reason " + (buy ? "buy" : "wait"), r.reason + (flat ? " · few sales" : "") + (r.newly_buy ? " · new today" : "") + (r.price < 5 ? " · cheap: add to a bulk order" : "")));
+  const lowTxt = lowText(r);
+  if (lowTxt || r.watch) {
+    const ln = el("div", "reason muted");
+    if (lowTxt) ln.appendChild(el("span", r.at_low ? "lowtag" : null, lowTxt));
+    if (r.watch) ln.appendChild(el("span", r.target_hit ? "lowtag" : null, (lowTxt ? " · " : "") + (r.target != null ? "your target " + money(r.target) : "watching for its 1-year low") + (r.target_hit ? ": reached" : "")));
+    head.appendChild(ln);
+  }
   const key = r.id + "|" + r.printing;
   const toggle = () => { open = open === key ? null : key; draw(); };
   head.addEventListener("click", toggle); head.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
   item.appendChild(head);
   if (open === key) item.appendChild(cardDetail(r, flat));
   return item;
+}
+
+function lowText(r) {
+  if (r.above_low_pct == null) return "";
+  return r.at_low ? "At its 1-year low" : "+" + Math.round(r.above_low_pct) + "% over its 1-year low";
+}
+
+function alertsBox() {
+  const A = R.alerts || [], box = $("alerts"); box.textContent = "";
+  if (!A.length) return;
+  const d = el("div", "alerts"); d.appendChild(el("b", null, "Today"));
+  A.slice(0, 8).forEach((a) => d.appendChild(el("div", null, (a.kind === "target"
+    ? (a.target != null ? "Hit your " + money(a.target) + " target: " : "At its 1-year low (on your list): ")
+    : "Card you need at its 1-year low: ") + a.name + " · " + a.set.replace(/^[^:]*:\s*/, "") + " · " + a.printing + " · " + money(a.price) +
+    (a.kind === "low" && a.state !== "Buy" ? " (set still falling; may go lower)" : ""))));
+  box.appendChild(d);
 }
 
 function cardDetail(r, flat) {
@@ -511,6 +542,11 @@ function cardDetail(r, flat) {
     if (r.hist_days < 330 && r.nm_low1y < 0.8 * r.low) t += " It was much cheaper earlier this year, before our price history starts.";
     d.appendChild(el("p", "muted", t));
   }
+  if (r.at_low && !buy) d.appendChild(el("p", null, "It's at its 1-year low, but it's marked can wait: in our backtests, cards at their own low in a falling set usually kept falling. If you want it at a known price anyway, this is the cheapest it's been all year."));
+  else if (r.at_low) d.appendChild(el("p", null, "It's at its 1-year low and marked buy first: a good moment to pick it up."));
+  else if (r.above_low_pct != null && r.above_low_pct <= 10) d.appendChild(el("p", null, "It's within " + Math.ceil(r.above_low_pct) + "% of its 1-year low (" + money(r.low) + ")."));
+  if (r.watch && r.target == null) d.appendChild(el("p", null, "You're watching this for its 1-year low" + (r.target_hit ? ": it's there now." : ". The morning summary tells you when it gets there.")));
+  if (r.target != null) d.appendChild(el("p", null, r.price <= r.target ? "Your target was " + money(r.target) + ": it's there now." : "Your target: " + money(r.target) + " (" + Math.round((r.price / r.target - 1) * 100) + "% to go). The morning summary tells you when it gets there."));
   if (flat) d.appendChild(el("p", "muted", "The price has barely moved for " + r.hist_days + " days, which usually means few sales. Check recent sales on TCGplayer."));
   if (r.price < 5) d.appendChild(el("p", "muted", "Under $5, an extra order's shipping ($1.31–$3.99) can cost more than waiting would save, so add it to a bigger order."));
   const btns = el("div", "btnrow");

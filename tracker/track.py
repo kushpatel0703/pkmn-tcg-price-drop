@@ -509,7 +509,34 @@ def analyse(cfg, cards, set_of, days, groups, sealed_by_set=None):
         name = set_of.get(str(pid))
         return coll.ok and coll.owns(name, cards[str(pid)], sub)
 
-    rows = []
+    # price targets you set (data/watch.json): {"cards": [{"set", "num", "printing", "target", "note"}]}
+    targets = {}
+    try:
+        for w in json.loads((ROOT / "data" / "watch.json").read_text()).get("cards", []):
+            targets[(w["set"], dex.card_number(w["num"]), w.get("printing", "Holofoil"))] = w
+    except (OSError, ValueError, KeyError):
+        pass
+    # targets already reached in the last report (so each target alerts once, including new targets already met)
+    prev_hit, prev_alerts = set(), []
+    try:
+        prev = json.loads((ROOT / "report" / "latest.json").read_text())
+        prev_hit = {(c["id"], c["printing"]) for c in prev.get("cards", []) if c.get("target_hit")}
+        if prev.get("date") == today:      # a same-day rebuild (e.g. after a Dex refresh) keeps today's alerts
+            prev_alerts = prev.get("alerts") or []
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        pass
+    LOW_BAND = 0.02          # "at its 1-year low" = within 2% of it
+    alert_min = cfg.get("alert_min", 20)
+
+    def low_at(a, i):
+        """lowest price in the year up to day i, and whether the price looks stale (flat)."""
+        j0 = bisect.bisect_left(ords, ords[i] - 364)
+        w = [a[j] for j in range(j0, i + 1) if not math.isnan(a[j])]
+        if len(w) < 60:
+            return None, False
+        return min(w), (max(w) - min(w) < 0.01 * max(w))
+
+    rows, alerts = [], []
     for k in keep:
         d = eng.describe(k, t)
         if not d:
@@ -535,6 +562,27 @@ def analyse(cfg, cards, set_of, days, groups, sealed_by_set=None):
             "high": round(high[1], 2), "high_on": dt.date.fromordinal(high[0]).isoformat(),
             "hist_days": len(win), "spark_from": spark_from, "spark": pts,
             "need": coll.mine(card_set[k])})
+        r = rows[-1]
+        lo_t, flat_t = low_at(a, t)
+        r["above_low_pct"] = None if lo_t is None or flat_t else round((a[t] / lo_t - 1) * 100, 1)
+        at_low = lo_t is not None and not flat_t and a[t] <= lo_t * (1 + LOW_BAND)
+        was_low = False
+        if y is not None and not math.isnan(a[y]):
+            lo_y, flat_y = low_at(a, y)
+            was_low = lo_y is not None and not flat_y and a[y] <= lo_y * (1 + LOW_BAND)
+        r["at_low"] = at_low
+        tg = targets.get((card_set[k], dex.card_number(c["num"]), sub))
+        if tg:
+            r["watch"] = True
+            r["target"] = tg.get("target")
+            hit = (tg.get("target") is not None and a[t] <= tg["target"]) or (tg.get("target") is None and at_low)
+            r["target_hit"] = bool(hit)
+            if hit and (pid, sub) not in prev_hit:
+                alerts.append({"kind": "target", "id": pid, "name": c["name"], "set": card_set[k], "printing": sub,
+                               "price": r["price"], "target": tg.get("target"), "low": round(lo_t, 2) if lo_t else None, "note": tg.get("note")})
+        elif at_low and not was_low and r["need"] and a[t] >= alert_min:
+            alerts.append({"kind": "low", "id": pid, "name": c["name"], "set": card_set[k], "printing": sub,
+                           "price": r["price"], "low": round(lo_t, 2), "state": d["state"]})
     rows.sort(key=lambda r: (r["state"] != "Buy", -r["price"]))
     state_of = {(r["id"], r["printing"]): r for r in rows}
 
@@ -604,6 +652,8 @@ def analyse(cfg, cards, set_of, days, groups, sealed_by_set=None):
         "counts": {"cards": len(rows), "buy": len(buy), "wait": len(rows) - len(buy),
                    "buy_total": round(sum(r["price"] for r in buy), 2), "newly_buy": sum(r["newly_buy"] for r in rows)},
         "evidence": ev,
+        "alerts": sorted({(x["kind"], x["id"], x["printing"]): x for x in prev_alerts + alerts}.values(), key=lambda x: -x["price"]),
+        "alert_min": alert_min,
         "dex": {"fetched": coll.fetched, "sets": len(coll.sets), "unmatched": coll.unmatched} if coll.ok else None,
         "caveats": CAVEATS,
         "sets": sets,
