@@ -1,7 +1,47 @@
 {
  "user": "kushp1",
- "fetched": "2026-11-18",
+ "fetched": "2026-11-19",
  "sets": [
+  {
+   "id": "me1",
+   "name": "Mega Evolution",
+   "play": "MEG",
+   "type": "main",
+   "owned": 141,
+   "total": 188
+  },
+  {
+   "id": "me2",
+   "name": "Phantasmal Flames",
+   "play": "PFL",
+   "type": "main",
+   "owned": 99,
+   "total": 130
+  },
+  {
+   "id": "me3",
+   "name": "Perfect Order",
+   "play": "POR",
+   "type": "main",
+   "owned": 93,
+   "total": 124
+  },
+  {
+   "id": "me4",
+   "name": "Chaos Rising",
+   "play": "CRI",
+   "type": "main",
+   "owned": 87,
+   "total": 122
+  },
+  {
+   "id": "me5",
+   "name": "Pitch Black",
+   "play": "PBL",
+   "type": "main",
+   "owned": 84,
+   "total": 120
+  },
   {
    "id": "sv10",
    "name": "Destined Rivals",
@@ -76,6 +116,11 @@
   }
  ],
  "owned": {
+  "me1": "1nr,2n,4nr,5nr,6n,7nr,8n,9nr,10hr,11nr,12nr,13n,14nr,15n,16nr,17nr,18nr,19n,20nr,21nr,22h,23nr,24nr,25n,26nr,27nr,28h,29nr,30nr,31n,32nr,33nr,34hr,35n,36h,37nr,38hr,39nr,40nr,41nr,42nr,43nr,44nr,45n,46nr,47nr,48hr,49n,50h,51n,52nr,53nr,54n,55n,56h,57n,58n,59nr,60h,61nr,62n,63n,64hr,65n,66nr,67nr,68nr,69nr,70nr,71nr,72nr,73hr,74hr,75nr,76n,77h,78nr,79nr,80n,81nr,82nr,83n,84nr,85nr,87nr,88hr,89nr,90nr,91nr,92nr,93h,94h,95h,96n,97nr,98nr,99n,100h,101nr,102nr,103n,104h,105nr,106nr,107nr,108nr,109nr,110n,111nr,112nr,113nr,114nr,115nr,116nr,117n,118nr,119nr,120n,121nr,122nr,123nr,124nr,125nr,126nr,127nr,128n,129n,130nr,131nr,132n,134h,138h,140h,141h,142h,148h,150h,158h,159h,161h,164h",
+  "me2": "1nr,2n,3hr,4h,5nr,6n,7nr,8hr,9nr,10n,11n,12n,13h,14h,15nr,17h,19n,20nr,21n,22nr,23nr,24nr,25nr,26h,27nr,28n,29h,30nr,31nr,32nr,33nr,34hr,35n,37nr,38n,39nr,40n,41h,42n,43nr,44nr,45h,46n,47n,48n,49n,50nr,51n,52n,53r,54nr,55nr,56h,57n,58n,59nr,60nr,61h,62nr,63nr,64n,65nr,66nr,67n,68hr,69nr,70h,71n,72nr,73n,74nr,75n,76nr,77nr,78n,79h,80nr,81n,82nr,83n,84h,85nr,86n,87nr,88nr,89nr,90nr,91n,92nr,93n,94n,96h,97h,98h,99h,104h,108h,122h,123h",
+  "me3": "1nr,2nr,3nr,4nr,5nr,6hr,7n,8nr,9nr,10n,11nr,13nr,14nr,15nr,17n,18nr,19hr,20nr,21h,22h,23nr,24h,25nr,26nr,27n,28hr,29nr,30nr,31h,32nr,33nr,34nr,35nr,36nr,37nr,38nr,39n,40nr,41hr,42n,43nr,44n,45h,46n,48nr,49n,50hr,51n,52nr,53h,54hr,55h,56n,57n,58nr,59nr,60nr,61n,62h,63nr,64nr,65n,66nr,67nr,68n,69nr,70nr,71n,72nr,73nr,74n,75nr,76n,77nr,78n,79nr,80nr,81nr,82n,83nr,84n,85nr,86h,87h,88hr,89h,91h,94h,96h,98h,99h,106h,119h",
+  "me4": "1n,2nr,4n,5nr,6nr,7hr,8nr,9n,10h,11nr,12nr,13hr,14n,16n,17nr,18n,19hr,20nr,21nr,22h,23n,24nr,25nr,26n,27n,28nr,29r,30nr,31n,32nr,33n,34n,36nr,37nr,38nr,39hr,40n,41h,42h,43n,44nr,45n,46nr,47n,49nr,50nr,51hr,52n,53nr,54n,55h,56nr,57n,58nr,59n,60nr,61nr,62n,63nr,65h,66nr,67nr,68hr,69n,70nr,71nr,72nr,74nr,75r,76n,77n,78nr,79nr,80r,81nr,82nr,83n,84h,85hr,86h,88h,90h,93h,105h,111h,116h,119h",
+  "me5": "1nr,2n,3n,4h,5nr,6nr,7nr,8h,9nr,10nr,11nr,12h,13nr,14nr,15nr,17nr,18n,19nr,20h,21nr,22n,23nr,24n,25n,26n,28h,29nr,30nr,32n,33n,34nr,35h,36nr,37nr,39n,40n,41n,42nr,43nr,44nr,45h,46n,47hr,48h,49n,50nr,51n,52nr,53nr,54n,55h,56hr,57nr,58n,60nr,61r,62hr,63n,64nr,66n,67nr,68nr,69nr,70hr,71nr,72n,73nr,74nr,75nr,76n,77nr,78n,79n,80nr,81nr,82n,83hr,84hr,85h,87h,92h,93h,111h,117h",
   "sv10": "1nr,2nr,4n,5nr,6n,7n,8h,9nr,10nr,11nr,12hr,13n,14nr,15n,16nr,17nr,18hr,19nr,20h,21nr,22n,23h,24nr,27nr,28n,29nr,30nr,31h,32n,33n,34h,35n,36hr,37nr,38nr,39h,40nr,41n,42h,43nr,44n,45nr,46nr,47n,48nr,49h,50n,52n,53n,54nr,55n,56hr,57n,58n,59n,60n,61n,62nr,63n,64nr,65h,67n,68nr,70hr,71n,72nr,73nr,74n,75nr,76nr,77nr,78h,79nr,80nr,82r,83nr,84nr,85n,86n,87nr,88n,89nr,90nr,91nr,92hr,93nr,94n,95n,96h,97nr,98nr,99n,100nr,101h,102nr,103r,104h,105n,107nr,108n,109nr,110nr,111nr,112nr,113n,114nr,115n,116nr,117n,118n,120nr,121nr,123nr,124n,125n,126nr,127n,128h,129n,130nr,131nr,132n,133nr,134nr,135nr,137nr,138nr,140n,141nr,142nr,143n,144n,145h,146h,147n,148n,149nr,151nr,152nr,153n,154nr,155nr,156n,157nr,158nr,159hr,160nr,161nr,162nr,163nr,164n,165nr,166n,167nr,168nr,169n,170nr,171n,172nr,173n,174n,175nr,176n,177nr,178n,179nr,180n,182nr,184h,187h,190h,192h,193h,195h,198h,199h,202h,203h,207h,208h,211h,214h,216h,217h",
   "sv35": "1nr,2nr,3h,4nr,5nr,6h,7nr,8nr,9h,10nr,11nr,12nr,13nr,14nr,15hr,16nr,17nr,18nr,19nr,20nr,21nr,22nr,23nr,24h,25nr,26hr,27nr,28nr,29nr,30nr,31nr,32nr,33nr,34hr,35nr,36nr,37nr,38h,39nr,40h,41nr,42nr,43nr,44nr,45hr,46nr,47nr,48nr,49nr,50nr,51nr,52nr,53nr,54nr,55nr,56nr,57nr,58nr,59nr,60nr,61nr,62nr,63nr,64nr,65h,66nr,67nr,68hr,69nr,70nr,71nr,72nr,73nr,74nr,75nr,76h,77nr,78nr,79nr,80nr,81nr,82nr,83nr,84nr,85hr,86nr,87nr,88nr,89nr,90nr,91nr,92nr,93nr,94hr,95nr,96nr,97nr,98nr,99nr,100nr,101hr,102nr,103nr,104nr,105hr,106nr,107nr,108nr,109nr,110hr,111nr,112nr,113hr,114nr,115h,116nr,117nr,118nr,119nr,120nr,121hr,122hr,123nr,124h,125nr,126nr,127nr,128nr,129nr,130hr,131nr,132hr,133nr,134hr,135hr,136hr,137nr,138nr,139hr,140nr,141hr,142hr,143nr,144hr,145h,146hr,147nr,148nr,149hr,150hr,151h,152nr,153nr,154nr,155nr,156nr,157nr,158nr,159nr,160nr,161nr,162nr,163nr,164nr,165nr,166h,167h,168h,169h,170h,171h,172h,173h,174h,175h,176h,177h,178h,179h,180h,181h,182h,183h,184h,185h,186h,187h,188h,189h,190h,191h,192h,193h,194h,195h,196h,197h,198h,199h,200h,201h,202h,203h,205h,206h,207h",
   "sv4": "1nr,2n,4n,5n,6nr,7n,8n,9n,10nr,11n,12n,14r,15n,16n,18h,19n,21n,22hr,23nr,24n,26nr,28h,30n,31nr,32hr,33n,34nr,35n,36hr,37n,38h,39n,40h,41nr,42n,43n,44n,45n,47n,48n,49r,52nr,53n,55nr,56n,58h,59n,60nr,61nr,62nr,63nr,64nr,65n,66h,67n,68h,69n,72h,74h,75n,77n,78n,79r,80nr,81h,82n,83n,84nr,85n,86n,88nr,90n,91nr,92n,94nr,96nr,97n,98h,99n,102nr,105n,106nr,107nr,109hr,110nr,111n,112nr,113n,114n,115n,116nr,117n,118hr,119n,120hr,121h,122h,123h,125h,126nr,127n,128nr,129n,130r,131n,132n,133n,134h,138n,141nr,142n,143n,145n,146nr,147nr,148nr,149nr,150n,151n,153n,155h,158h,160n,162n,163n,164n,166n,167n,168n,169nr,170n,171nr,172nr,173n,174nr,175n,176n,177n,178n,179n,180n,181n,182n,184h,188h,189h,192h,198h,207h,228h,229h,239h,243h,250h",
@@ -84,6 +129,6 @@
   "sv8": "1nr,2nr,3nr,4h,5nr,6r,7n,8n,9nr,10nr,11h,12nr,13nr,14h,15n,16n,17n,18nr,19n,20nr,21n,22n,23n,24nr,25nr,26n,27n,28nr,29nr,30nr,31hr,32nr,33nr,34n,35nr,38h,39nr,41nr,43nr,44nr,45nr,46nr,47nr,48h,49nr,50nr,51nr,52nr,53nr,54nr,55n,56h,57h,58n,59n,60nr,61nr,62nr,63nr,64nr,65h,66n,67n,68h,69n,70nr,71nr,72hr,73nr,74nr,75nr,77nr,78n,79n,80nr,81nr,82nr,83hr,84nr,85n,87nr,88n,89n,90nr,92hr,93n,94nr,95nr,96n,97nr,98nr,99nr,100n,101nr,102n,103r,104nr,105nr,106h,107h,108nr,109nr,110h,111n,112nr,113n,114nr,115nr,116nr,117nr,118nr,120nr,121nr,122nr,123nr,124nr,125nr,126nr,127nr,128nr,129nr,131n,132h,134n,135hr,136hr,137nr,138nr,139nr,140n,141hr,143nr,144n,145nr,146n,148n,149nr,150nr,151n,152nr,153n,154nr,155nr,156nr,157n,158nr,159h,160h,161h,163n,165n,166n,167nr,168n,169n,170nr,171n,172nr,173nr,174nr,175nr,177n,178n,179nr,180n,181nr,184n,187n,188nr,189nr,190n,191h,199h,200h,206h,214h,217h,226h,227h,230h,233h,235h,236h,237h",
   "sv9": "1nr,2n,3h,4nr,5nr,6nr,7nr,8nr,9n,10n,11h,12nr,13n,15n,16nr,17n,19nr,20n,21h,22nr,23nr,26n,28n,29n,32nr,33nr,34n,35n,36nr,37h,38n,39nr,40nr,41hr,42nr,43h,44n,45n,46n,47nr,48nr,49nr,50n,51h,52nr,53h,54n,55h,56h,57n,58nr,59r,60n,61nr,62nr,63hr,64nr,65nr,66r,67hr,68nr,71nr,72n,73nr,74nr,76n,77nr,78nr,79h,80nr,81nr,82h,83nr,84n,85h,86n,87n,88n,89nr,90nr,91r,92nr,93nr,94h,95h,96nr,97r,98h,99n,100n,101nr,102n,103nr,104n,105nr,106n,107hr,108nr,109nr,110nr,112nr,113nr,114h,115n,116h,117hr,118n,119nr,120n,121h,122n,124nr,125nr,127nr,128hr,129r,130r,131n,132n,133nr,134r,135nr,136h,137nr,138n,139n,140n,141n,142nr,143r,145n,146nr,147n,148nr,149nr,150nr,151nr,152nr,153nr,154r,155n,156n,157n,158nr,159n,160h,161h,168h,169h,170h,177h,178h,180h,181h,182h",
   "swsh10": "2n,3n,4n,5n,6n,8n,9n,10nr,11n,12n,13n,14n,15n,19n,20n,21n,22n,23n,24n,25h,28n,29nr,31nr,32n,33r,34nr,35n,36nr,37n,38nr,39h,40h,41n,42n,43n,44n,45r,46h,47n,48n,51nr,52h,55nr,56n,58nr,59n,60nr,61n,63n,64nr,65n,67n,69r,70nr,71n,74n,75n,76n,77r,79n,80nr,82h,85n,88n,89n,90n,92n,93h,95nr,96n,98h,101h,103n,104n,105nr,106n,108n,109n,111n,112nr,115n,116n,118n,119n,120nr,121nr,122nr,123n,125nr,126h,127nr,128n,129n,130r,131nr,132n,136r,137n,138nr,139nr,140nr,141nr,142n,143nr,144n,145n,146n,147h,148n,149n,150n,151nr,152n,153n,154n,155n,156n,157n,158n,159n,162h,164h,182h,191h",
-  "swsh10tg": "TG29h,TG22h,TG04h,TG08h,TG12h,TG23h"
+  "swsh10tg": "TG04h,TG08h,TG12h,TG22h,TG23h,TG29h"
  }
 }
