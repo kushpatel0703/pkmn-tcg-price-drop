@@ -171,6 +171,7 @@ function init() {
   buildSets();
   const f = $("foot");
   (R.caveats || []).forEach((c) => f.appendChild(el("p", null, c)));
+  if (R.nm_latest && (new Date(R.date) - new Date(R.nm_latest)) / 864e5 > 7) f.appendChild(el("p", null, "Near Mint 1-year ranges haven't updated since " + fmtDate(R.nm_latest, true) + " (JustTCG key or plan may have changed)."));
   if (R.dex) f.appendChild(el("p", null, "Cards you own in Dex (@kushp1, list from " + fmtDate(R.dex.fetched, true) + ") are hidden everywhere: lists, totals and copy buttons." +
     (R.dex.unmatched && R.dex.unmatched.length ? " Not matched to TCGplayer yet: " + R.dex.unmatched.join(", ") + "." : "")));
   f.appendChild(el("p", null, "Prices from TCGplayer via tcgcsv.com, updated daily. Near Mint 1-year ranges from JustTCG (" + (R.nm_cards || 0).toLocaleString() + " cards so far). Price history on file since " + fmtDate(R.history_from, true) + "."));
@@ -538,7 +539,8 @@ function cardDetail(r, flat) {
   d.appendChild(el("p", null, span + ": low " + money(r.low) + " (" + fmtDate(r.low_on) + ") · high " + money(r.high) + " (" + fmtDate(r.high_on) + ")" +
     (r.chg4w != null ? " · 4 weeks " + pctS(r.chg4w) : "")));
   if (r.nm_low1y != null && r.nm_low1y >= 0.4 * r.price) {
-    let t = "Near Mint over the past year (JustTCG): " + money(r.nm_low1y) + " – " + money(r.nm_high1y) + ".";
+    const ago = r.nm_age == null ? "" : r.nm_age === 0 ? ", checked today" : r.nm_age === 1 ? ", checked yesterday" : ", checked " + r.nm_age + " days ago";
+    let t = "Near Mint over the past year (JustTCG" + ago + "): " + money(r.nm_low1y) + " – " + money(r.nm_high1y) + "." + (r.nm_age > 14 ? " This range may be out of date." : "");
     if (r.hist_days < 330 && r.nm_low1y < 0.8 * r.low) t += " It was much cheaper earlier this year, before our price history starts.";
     d.appendChild(el("p", "muted", t));
   }

@@ -754,6 +754,11 @@ def main():
     nm_path = ROOT / "data" / "nearmint.json"
     nearmint.refresh(nm_path, report["cards"], report["date"], nm_key)
     report["nm_cards"] = nearmint.annotate(nm_path, report["cards"], report["date"])
+    try:     # newest Near Mint check, so the morning summary can warn if JustTCG quietly stops updating
+        checks = [e.get("checked") for e in json.loads(nm_path.read_text()).values() if isinstance(e, dict) and e.get("checked")]
+        report["nm_latest"] = max(checks) if checks else None
+    except (OSError, ValueError):
+        report["nm_latest"] = None
     write_outputs(report)
     c, ev = report["counts"], report["evidence"]["all"]
     print(f"{c['cards']} cards | buy {c['buy']} (${c['buy_total']:.0f}) | wait {c['wait']} | newly buy {c['newly_buy']} | "
