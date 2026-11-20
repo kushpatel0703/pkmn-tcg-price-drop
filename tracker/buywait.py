@@ -7,8 +7,7 @@ Each card worth $1 or more gets one state per day, from data up to that day only
     Just listed    the card was first priced less than 45 days ago
     Set falling    the median card in the set is down 3%+ over 8 weeks; the set
                    stays "falling" until that recovers above -1%
-    Still dropping the card is down 8%+ in a week or 10%+ in 4 weeks
-    Just jumped    the card is up 8%+ in a week or 20%+ in 4 weeks
+    Still dropping the card is down 4%+ in a week or 6%+ in 4 weeks
   Buy: none of those applied on any of the last 7 days.
 
   While the whole market is rising (median card up 2%+ over 8 weeks), only
@@ -35,11 +34,12 @@ NEW_SET_DAYS = 182
 NEW_CARD_DAYS = 45
 SET_FALL, SET_RECOVER = -0.03, -0.01
 SET_MIN_CARDS = 5
-DROP_7, DROP_28 = -0.08, -0.10
-JUMP_7, JUMP_28 = 0.08, 0.20
+DROP_7, DROP_28 = -0.04, -0.06
+# "Just jumped" (wait after a price jump) is off: the 2024-26 backtest found waiting after a jump cost money.
+JUMP_7, JUMP_28 = None, None
 SETTLE_DAYS = 7
 OUTLOOK = 60
-RULE = ("v2: new<182d, listed<45d, set8w<=-3% (recover -1%), drop 7d-8%/28d-10%, jump 7d+8%/28d+20%, settle 7d; "
+RULE = ("v3: new<182d, listed<45d, set8w<=-3% (recover -1%), drop 7d-4%/28d-6%, no jump rule, settle 7d; "
         "market8w>=+2%: only dropping")
 
 NONE, NEW_SET, NEW_CARD, SET_FALLING, DROPPING, JUMPED = 0, 1, 2, 3, 4, 5
@@ -153,7 +153,7 @@ class Engine:
         c28 = self.change(k, i, self.j28)
         if DROPPING not in skip and ((c7 is not None and c7 <= DROP_7) or (c28 is not None and c28 <= DROP_28)):
             return DROPPING
-        if JUMPED not in skip and ((c7 is not None and c7 >= JUMP_7) or (c28 is not None and c28 >= JUMP_28)):
+        if JUMP_7 is not None and JUMPED not in skip and ((c7 is not None and c7 >= JUMP_7) or (c28 is not None and c28 >= JUMP_28)):
             return JUMPED
         return NONE
 

@@ -26,6 +26,6 @@
   "archives_per_run": 10,
   "history_start": "2024-02-08",
   "chase_min": 20,
-  "buywait_rule_since": "2026-11-13",
+  "buywait_rule_since": "2026-11-20",
   "market_aware": true
 }

@@ -115,7 +115,7 @@
     <select id="sort" class="full" aria-label="Sort"></select>
     <div id="budgetbox" class="full hide">
       <div class="amt"><span>Budget $</span><input id="budget" type="number" inputmode="decimal" min="0" step="5" placeholder="e.g. 150" aria-label="Budget in dollars"></div>
-      <label class="opt"><input id="budgetlow" type="checkbox"><span>Also spend leftover money on can-wait cards within 10% of their 1-year low</span></label>
+      <label class="opt"><input id="budgetlow" type="checkbox"><span>Also spend leftover money on can-wait cards within 10% of their 1-year low (in our backtests this usually wasn't cheaper than waiting; it locks in a known price)</span></label>
     </div>
   </div>
   <div id="focus"></div>
@@ -341,7 +341,7 @@ function setDetail(s) {
   const why = (R.market_rising && (s.new || s.falling)) ? "The whole market is rising, and in rising markets waiting has cost money, so this set's cards are only held back if they are still dropping."
     : s.new ? "This set came out " + fmtDate(s.published, true) + ". New sets usually keep falling for months; its cards turn buy-first once it is 6 months old and steady."
     : s.falling ? "The typical card in this set is " + pctS(s.chg8w) + " over 8 weeks. Cards turn buy-first once that recovers above −1% and nothing else flags for a week."
-    : "The set is steady. Cards marked can-wait are dropping or jumping on their own.";
+    : "The set is steady. Cards marked can-wait are still dropping on their own.";
   d.appendChild(el("p", null, why));
   const t = el("table", "groups"), hr = el("tr");
   ["Group", "Cards", "Buy first", "Can wait"].forEach((h, i) => hr.appendChild(el("th", i ? "num" : null, h))); t.appendChild(hr);

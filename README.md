@@ -18,16 +18,17 @@ A card gets **Can wait** when the first of these applies:
 | New set | Released under 6 months ago |
 | Just listed | First priced under 45 days ago |
 | Set falling | The median card in the set is down 3%+ over 8 weeks. It stays falling until that recovers above −1%. |
-| Still dropping | Down 8%+ in a week, or 10%+ in 4 weeks |
-| Just jumped | Up 8%+ in a week, or 20%+ in 4 weeks |
+| Still dropping | Down 4%+ in a week, or 6%+ in 4 weeks |
 
 Otherwise it gets **Buy first**, once nothing has flagged it for 7 days. Prices from before a set's release are ignored.
 
-**Market-aware:** when the median card across all sets is up 2%+ over 8 weeks, only *Still dropping* holds a card back. In rising markets waiting on new, falling or jumped cards cost money. This switch was chosen on 2024–25 data and then checked on 2026, which it was not tuned on: following the labels saved 1.6% vs buying at once in 2026, against 0.8% without it. Turn it off with `"market_aware": false` in `config.json`.
+**Market-aware:** when the median card across all sets is up 2%+ over 8 weeks, only *Still dropping* holds a card back. In rising markets waiting on new or falling cards cost money. This switch was chosen on 2024–25 data and then checked on 2026, which it was not tuned on: following the labels saved 1.6% vs buying at once in 2026, against 0.8% without it. Turn it off with `"market_aware": false` in `config.json`.
 
 Why it is set-led: in the 2026 backtests, a card being at its own low did not predict that waiting would pay; those cards kept falling. A falling or new set did predict it.
 
 The **track record** at the top of the dashboard is recomputed every run from the history on file. On weekly past dates it compares what Buy-first and can-wait cards did over the next 60 days, and what following the labels paid versus buying everything straight away, overall and per half-year (so a single blended number can't hide a bad period). With history from Apr 2024: Buy-first cards rose more than can-wait cards in 5 of 6 half-years, and following the labels saved about 1.6% overall. Cached in `data/buywait_evidence.json`; the cache resets when the rule or the start of the history changes. Dates after `buywait_rule_since` are also reported separately as live results.
+
+**Rule v3 (Nov 20, 2026).** A backtest (tuned on 2024–25, checked on 2026) dropped the old "Just jumped" wait (waiting after a jump cost money) and tightened *Still dropping* from 8%/wk or 10%/4 wks to 4%/6%. Saved vs buying at once: 1.6% → 2.4% on 2024–25 and 1.9% → 2.3% on 2026, positive in every half-year, and better at 30- and 90-day horizons too. Buying can-wait cards because they hit their 1-year low made results worse, so low alerts are information, not a buy signal.
 
 ## Dashboard
 
